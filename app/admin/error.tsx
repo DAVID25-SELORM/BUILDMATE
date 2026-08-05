@@ -1,0 +1,2 @@
+"use client";
+export default function AdminError({error,reset}:{error:Error&{digest?:string};reset:()=>void}){return <div className="container-shell py-12"><div className="card mx-auto max-w-xl p-8 text-center"><h1 className="text-2xl font-black">Unable to load this admin view</h1><p className="mt-3 text-slate-600">{error.message||"An unexpected server error occurred."}</p><button className="btn-primary mt-5" onClick={reset}>Try again</button></div></div>}

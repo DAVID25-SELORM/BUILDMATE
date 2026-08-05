@@ -33,12 +33,15 @@ export default async function SuppliersPage({
   const q = await searchParams,
     page = Math.max(1, Number(q.page) || 1),
     s = await createClient();
-  const { data, error } = await s.rpc("admin_list_suppliers", {
+  const { data, error } = await s.rpc("admin_list_suppliers_v2", {
     search_text: q.q || null,
     status_filter: q.status || null,
+    verification_level_filter: q.verification || null,
     region_filter: q.region || null,
     category_filter: q.category || null,
     performance_filter: q.performance || null,
+    registered_from: q.from || null,
+    registered_to: q.to || null,
     sort_by: q.sort || "newest",
     page_number: page,
     page_size: 25,
@@ -95,6 +98,12 @@ export default async function SuppliersPage({
           defaultValue={q.category}
           placeholder="Product category"
         />
+        <select className="input" name="verification" defaultValue={q.verification}>
+          <option value="">All verification levels</option>
+          {['identity_verified','business_verified','tax_verified','warehouse_verified','authorised_distributor'].map(x=><option key={x}>{x.replaceAll('_',' ')}</option>)}
+        </select>
+        <input className="input" name="from" defaultValue={q.from} type="date" aria-label="Registered from" />
+        <input className="input" name="to" defaultValue={q.to} type="date" aria-label="Registered to" />
         <select
           className="input"
           name="performance"

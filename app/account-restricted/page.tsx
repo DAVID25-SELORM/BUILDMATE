@@ -1,0 +1,2 @@
+import{SignOutButton}from"@/components/auth/SignOutButton";
+export default function AccountRestricted(){return <main className="container-shell flex min-h-screen items-center justify-center py-12"><section className="card max-w-lg p-8 text-center"><h1 className="text-3xl font-black">Account access restricted</h1><p className="mt-3 text-slate-600">This account is suspended or deactivated. Contact BuildMate support if you believe this is an error.</p><div className="mt-6"><SignOutButton/></div></section></main>}

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 
-type NavItem = string | { label: string; href: string };
+type NavLink = { label: string; href: string };
+type NavItem = string | (NavLink & { children?: readonly NavLink[] });
 
 export function DashboardShell({ title, nav, children }: { title: string; nav: NavItem[]; children: React.ReactNode }) {
   const pathname = usePathname();
@@ -12,6 +13,6 @@ export function DashboardShell({ title, nav, children }: { title: string; nav: N
     const label = typeof item === "string" ? item : item.label;
     const active = typeof item === "string" ? index === 0 : pathname === item.href || (index > 0 && pathname.startsWith(`${item.href}/`));
     const className = `block w-full rounded-xl px-4 py-3 text-left text-sm font-medium ${active ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-50"}`;
-    return typeof item === "string" ? <span key={label} className={className}>{label}</span> : <Link key={item.href} href={item.href} prefetch className={className}>{label}</Link>;
+    return typeof item === "string" ? <span key={label} className={className}>{label}</span> : <div key={item.href}><Link href={item.href} prefetch className={className}>{label}</Link>{item.children&&active&&<div className="ml-3 border-l pl-2">{item.children.map(child=><Link key={child.href} href={child.href} prefetch className="block rounded-lg px-3 py-2 text-xs text-slate-600 hover:bg-slate-50">{child.label}</Link>)}</div>}</div>;
   })}</aside><main>{children}</main></div></div>;
 }

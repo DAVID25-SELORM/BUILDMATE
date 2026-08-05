@@ -30,11 +30,12 @@ export function SupplierActionsPanel({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [reasonMode, setReasonMode] = useState<"approve" | "reinstate" | "reject" | "information_required" | "suspend" | null>(null);
+  const [reasonMode, setReasonMode] = useState<"under_review" | "approve" | "reinstate" | "reject" | "information_required" | "suspend" | null>(null);
   const [reason, setReason] = useState("");
   const [levels, setLevels] = useState<VerificationLevel[]>(currentVerificationLevels);
   const [note, setNote] = useState("");
   const [reviewerId, setReviewerId] = useState(currentReviewerId ?? "");
+  const [reviewerReason, setReviewerReason] = useState("");
 
   function toggleLevel(level: VerificationLevel) {
     setLevels((prev) => (prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level]));
@@ -61,7 +62,7 @@ export function SupplierActionsPanel({
 
       <div className="flex flex-wrap gap-3">
         {status === "submitted" && (
-          <button type="button" className="btn-secondary" disabled={loading} onClick={() => run(() => startReview(organisationId))}>Start review</button>
+          <button type="button" className="btn-secondary" disabled={loading} onClick={() => setReasonMode("under_review")}>Start review</button>
         )}
         {(status === "submitted" || status === "under_review") && (
           <>
@@ -104,7 +105,7 @@ export function SupplierActionsPanel({
       {reasonMode && (
         <div className="rounded-xl border border-slate-200 p-4">
           <label className="label" htmlFor="reason">
-            {reasonMode === "approve" ? "Approval reason" : reasonMode === "reinstate" ? "Reinstatement reason" : reasonMode === "reject" ? "Rejection reason" : reasonMode === "suspend" ? "Suspension reason" : "What information is required?"}
+            {reasonMode === "under_review" ? "Reason for starting review" : reasonMode === "approve" ? "Approval reason" : reasonMode === "reinstate" ? "Reinstatement reason" : reasonMode === "reject" ? "Rejection reason" : reasonMode === "suspend" ? "Suspension reason" : "What information is required?"}
           </label>
           <textarea id="reason" className="input min-h-24" value={reason} onChange={(e) => setReason(e.target.value)} />
           <div className="mt-3 flex gap-3">
@@ -114,8 +115,10 @@ export function SupplierActionsPanel({
               className="btn-primary"
               disabled={loading}
               onClick={() =>
-                run(() =>
-                  reasonMode === "approve"
+                confirm("Confirm this sensitive supplier status change? The reason will be audited.") && run(() =>
+                  reasonMode === "under_review"
+                    ? startReview(organisationId, reason)
+                    : reasonMode === "approve"
                     ? approveSupplier(organisationId, levels, reason)
                     : reasonMode === "reinstate"
                       ? reinstateSupplier(organisationId, reason)
@@ -140,8 +143,9 @@ export function SupplierActionsPanel({
             <option value="">Unassigned</option>
             {reviewers.map((r) => <option key={r.id} value={r.id}>{r.full_name}</option>)}
           </select>
-          <button type="button" className="btn-secondary shrink-0" disabled={loading || !reviewerId} onClick={() => run(() => assignReviewer(organisationId, reviewerId))}>Assign</button>
+          <button type="button" className="btn-secondary shrink-0" disabled={loading || !reviewerId || reviewerReason.trim().length<5} onClick={() => confirm("Assign this reviewer? The reason will be audited.")&&run(() => assignReviewer(organisationId, reviewerId, reviewerReason))}>Assign</button>
         </div>
+        <input className="input mt-2" value={reviewerReason} onChange={e=>setReviewerReason(e.target.value)} minLength={5} placeholder="Required assignment reason"/>
       </div>
 
       <div className="border-t border-slate-200 pt-5">

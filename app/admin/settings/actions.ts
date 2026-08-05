@@ -1,0 +1,4 @@
+"use server";
+import{revalidatePath}from"next/cache";import{requireRole}from"@/lib/auth/session";import{createClient}from"@/lib/supabase/server";
+export type PermissionState={error?:string;message?:string}|null;
+export async function setAdminPermission(adminId:string,permission:string,grant:boolean,_state:PermissionState,formData:FormData):Promise<PermissionState>{const{profile}=await requireRole(["super_admin"]);if(profile?.role!=="super_admin")return{error:"Super administrator required"};const reason=String(formData.get("reason")??"").trim();if(reason.length<5)return{error:"Provide an audit reason of at least 5 characters"};const{error}=await(await createClient()).rpc("super_admin_set_permission",{target_admin:adminId,target_permission:permission,should_grant:grant,target_reason:reason});if(error)return{error:error.message};revalidatePath("/admin/settings");return{message:grant?"Permission granted":"Permission revoked"}}

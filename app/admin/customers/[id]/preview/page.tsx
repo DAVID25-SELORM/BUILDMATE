@@ -1,2 +1,76 @@
-import Link from"next/link";import{notFound}from"next/navigation";import{requireRole}from"@/lib/auth/session";import{createClient}from"@/lib/supabase/server";
-export default async function CustomerPreview({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{session?:string}>}){const{id}=await params,{session}=await searchParams;const{user}=await requireRole(["admin","super_admin"]);const s=await createClient();const{data:preview}=await s.from("support_view_sessions").select("id,reason,started_at,ended_at").eq("id",session??"").eq("admin_id",user.id).eq("subject_type","customer").eq("subject_id",id).is("ended_at",null).maybeSingle();if(!preview)notFound();const{data}=await s.rpc("admin_customer_detail",{target_customer:id});if(!data)notFound();const d=data as unknown as{profile:Record<string,unknown>;orders:Record<string,unknown>[];quotes:Record<string,unknown>[];projects:Record<string,unknown>[]};return <div className="min-h-screen bg-slate-100"><div className="sticky top-0 z-20 bg-amber-300 px-4 py-3 text-center text-sm font-bold text-amber-950">ADMIN READ-ONLY CUSTOMER PREVIEW · No purchases, payments, password or security changes are available. <Link className="ml-3 underline" href={`/admin/customers/${id}`}>Exit preview</Link></div><main className="container-shell py-8"><h1 className="text-3xl font-black">{String(d.profile.full_name)}</h1><p className="text-slate-600">Support preview started for: {preview.reason}</p><div className="mt-6 grid gap-4 md:grid-cols-3"><div className="card p-5"><b>Orders</b><p className="text-3xl font-black">{d.orders.length}</p></div><div className="card p-5"><b>Quotations</b><p className="text-3xl font-black">{d.quotes.length}</p></div><div className="card p-5"><b>Projects</b><p className="text-3xl font-black">{d.projects.length}</p></div></div><section className="card mt-6 p-5"><h2 className="text-xl font-bold">Recent orders</h2>{d.orders.slice(0,10).map((o,i)=><div className="flex justify-between border-b py-3 text-sm" key={i}><span>{String(o.order_number)}</span><span className="capitalize">{String(o.status).replaceAll("_"," ")}</span></div>)}</section></main></div>}
+import { notFound } from "next/navigation";
+import { exitSupportPreview } from "@/app/admin/preview-actions";
+import { requireRole } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
+export default async function CustomerPreview({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ session?: string }>;
+}) {
+  const { id } = await params,
+    { session } = await searchParams;
+  const { user } = await requireRole(["admin", "super_admin"]);
+  const s = await createClient();
+  const { data: preview } = await s
+    .from("support_view_sessions")
+    .select("id,reason,started_at,ended_at")
+    .eq("id", session ?? "")
+    .eq("admin_id", user.id)
+    .eq("subject_type", "customer")
+    .eq("subject_id", id)
+    .is("ended_at", null)
+    .maybeSingle();
+  if (!preview) notFound();
+  const { data } = await s.rpc("admin_customer_detail", {
+    target_customer: id,
+  });
+  if (!data) notFound();
+  const d = data as unknown as {
+    profile: Record<string, unknown>;
+    orders: Record<string, unknown>[];
+    quotes: Record<string, unknown>[];
+    projects: Record<string, unknown>[];
+  };
+  return (
+    <div className="min-h-screen bg-slate-100">
+      <div className="sticky top-0 z-20 bg-amber-300 px-4 py-3 text-center text-sm font-bold text-amber-950">
+        ADMIN READ-ONLY CUSTOMER PREVIEW · No purchases, payments, password or
+        security changes are available.{" "}
+        <form className="ml-3 inline" action={exitSupportPreview.bind(null,preview.id,`/admin/customers/${id}`)}><button className="underline">Exit preview</button></form>
+      </div>
+      <main className="container-shell py-8">
+        <h1 className="text-3xl font-black">{String(d.profile.full_name)}</h1>
+        <p className="text-slate-600">
+          Support preview started for: {preview.reason}
+        </p>
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="card p-5">
+            <b>Orders</b>
+            <p className="text-3xl font-black">{d.orders.length}</p>
+          </div>
+          <div className="card p-5">
+            <b>Quotations</b>
+            <p className="text-3xl font-black">{d.quotes.length}</p>
+          </div>
+          <div className="card p-5">
+            <b>Projects</b>
+            <p className="text-3xl font-black">{d.projects.length}</p>
+          </div>
+        </div>
+        <section className="card mt-6 p-5">
+          <h2 className="text-xl font-bold">Recent orders</h2>
+          {d.orders.slice(0, 10).map((o, i) => (
+            <div className="flex justify-between border-b py-3 text-sm" key={i}>
+              <span>{String(o.order_number)}</span>
+              <span className="capitalize">
+                {String(o.status).replaceAll("_", " ")}
+              </span>
+            </div>
+          ))}
+        </section>
+      </main>
+    </div>
+  );
+}

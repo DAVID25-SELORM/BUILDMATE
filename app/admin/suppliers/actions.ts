@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { VerificationLevel } from "@/lib/supplier/constants";
 
 type ActionResult = { success: true } | { success: false; error: string };
+export type SupplierAdminState = { error?: string; message?: string } | null;
 
 function refresh(organisationId: string) {
   revalidatePath(`/admin/suppliers/${organisationId}`);
@@ -30,8 +32,9 @@ async function callStatusRpc(
   return { success: true };
 }
 
-export async function startReview(organisationId: string): Promise<ActionResult> {
-  return callStatusRpc(organisationId, "under_review");
+export async function startReview(organisationId: string, reason: string): Promise<ActionResult> {
+  if (reason.trim().length < 5) return { success: false, error: "A review reason is required" };
+  return callStatusRpc(organisationId, "under_review", reason);
 }
 
 export async function approveSupplier(organisationId: string, verificationLevels: VerificationLevel[], reason: string): Promise<ActionResult> {
@@ -59,9 +62,10 @@ export async function reinstateSupplier(organisationId: string, reason: string):
   return callStatusRpc(organisationId, "approved", reason);
 }
 
-export async function assignReviewer(organisationId: string, reviewerId: string): Promise<ActionResult> {
+export async function assignReviewer(organisationId: string, reviewerId: string, reason: string): Promise<ActionResult> {
+  if (reason.trim().length < 5) return { success: false, error: "An assignment reason is required" };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("assign_supplier_reviewer", { target_org: organisationId, reviewer: reviewerId });
+  const { error } = await supabase.rpc("assign_supplier_reviewer_v2", { target_org: organisationId, reviewer: reviewerId, target_reason: reason });
   if (error) return { success: false, error: error.message };
   refresh(organisationId);
   return { success: true };
@@ -82,3 +86,7 @@ export async function getAdminDocumentSignedUrl(storagePath: string): Promise<{ 
   if (error || !data) return { error: error?.message ?? "Unable to generate a link" };
   return { url: data.signedUrl };
 }
+
+export async function manageSupplierControl(organisationId:string,action:string,_state:SupplierAdminState,formData:FormData):Promise<SupplierAdminState>{const reason=String(formData.get("reason")??"").trim();if(reason.length<5)return{error:"Provide a reason of at least 5 characters"};const{error}=await(await createClient()).rpc("admin_manage_supplier",{target_supplier:organisationId,target_action:action,target_reason:reason});if(error)return{error:error.message};refresh(organisationId);return{message:"Supplier control updated and audited"}}
+export async function changeSettlementHold(organisationId:string,hold:boolean,_state:SupplierAdminState,formData:FormData):Promise<SupplierAdminState>{const reason=String(formData.get("reason")??"").trim();if(reason.length<5)return{error:"Provide a reason of at least 5 characters"};const{error}=await(await createClient()).rpc("admin_set_settlement_hold",{target_supplier:organisationId,hold,target_reason:reason});if(error)return{error:error.message};refresh(organisationId);return{message:hold?"Settlements placed on hold":"Settlement hold released"}}
+export async function startSupplierPreview(organisationId:string,formData:FormData){const reason=String(formData.get("reason")??"").trim();if(reason.length<5)throw new Error("A preview reason is required");const{data,error}=await(await createClient()).rpc("start_support_view",{target_type:"supplier",target_id:organisationId,target_reason:reason});if(error||!data)throw new Error(error?.message??"Unable to start preview");redirect(`/admin/suppliers/${organisationId}/preview?session=${data}`)}

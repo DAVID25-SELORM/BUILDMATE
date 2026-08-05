@@ -47,10 +47,14 @@ export async function proxy(request: NextRequest) {
   }
 
   let role: string | null = null;
+  let accountStatus: string | null = null;
   if (isProtected || isAuthPath) {
-    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+    const { data: profile } = await supabase.from("profiles").select("role,account_status").eq("id", user.id).single();
     role = profile?.role ?? null;
+    accountStatus = profile?.account_status ?? null;
   }
+
+  if (["suspended","deactivated"].includes(accountStatus??"") && path!=="/account-restricted") return NextResponse.redirect(new URL("/account-restricted",request.url));
 
   if (isAuthPath) {
     return NextResponse.redirect(new URL(getRedirectForRole(role), request.url));
