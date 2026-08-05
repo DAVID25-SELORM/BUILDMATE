@@ -1,2 +1,47 @@
-import{DashboardShell}from"@/components/dashboard/DashboardShell";import{AssignDeliveryForm}from"@/components/admin/deliveries/AssignDeliveryForm";import{createClient}from"@/lib/supabase/server";
-export default async function AdminDeliveries(){const s=await createClient();const[{data:deliveries},{data:drivers}]=await Promise.all([s.from("deliveries").select("id,status,delivery_location,vehicle_registration,orders(order_number,total)").order("created_at",{ascending:false}),s.from("profiles").select("id,full_name").eq("role","driver")]);return <DashboardShell title="Platform administration" nav={[{label:"Overview",href:"/admin"},{label:"Deliveries",href:"/admin/deliveries"}]}><h1 className="text-3xl font-black">Delivery operations</h1><div className="mt-6 space-y-4">{(deliveries??[]).map(d=>{const o=d.orders as unknown as{order_number:string}|null;return <article className="card p-5" key={d.id}><div className="flex justify-between"><div><b>{o?.order_number}</b><p className="text-sm text-slate-600">{d.delivery_location}</p></div><span className="capitalize">{d.status.replaceAll("_"," ")}</span></div>{d.status==="pending_assignment"&&<AssignDeliveryForm delivery={d.id} drivers={drivers??[]}/>}</article>})}</div></DashboardShell>}
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { AssignDeliveryForm } from "@/components/admin/deliveries/AssignDeliveryForm";
+import { createClient } from "@/lib/supabase/server";
+import { ADMIN_NAV } from "@/lib/admin/navigation";
+export default async function AdminDeliveries() {
+  const s = await createClient();
+  const [{ data: deliveries }, { data: drivers }] = await Promise.all([
+    s
+      .from("deliveries")
+      .select(
+        "id,status,delivery_location,vehicle_registration,orders(order_number,total)",
+      )
+      .order("created_at", { ascending: false }),
+    s.from("profiles").select("id,full_name").eq("role", "driver"),
+  ]);
+  return (
+    <DashboardShell
+      title="Platform administration"
+      nav={[...ADMIN_NAV]}
+    >
+      <h1 className="text-3xl font-black">Delivery operations</h1>
+      <div className="mt-6 space-y-4">
+        {(deliveries ?? []).map((d) => {
+          const o = d.orders as unknown as { order_number: string } | null;
+          return (
+            <article className="card p-5" key={d.id}>
+              <div className="flex justify-between">
+                <div>
+                  <b>{o?.order_number}</b>
+                  <p className="text-sm text-slate-600">
+                    {d.delivery_location}
+                  </p>
+                </div>
+                <span className="capitalize">
+                  {d.status.replaceAll("_", " ")}
+                </span>
+              </div>
+              {d.status === "pending_assignment" && (
+                <AssignDeliveryForm delivery={d.id} drivers={drivers ?? []} />
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </DashboardShell>
+  );
+}

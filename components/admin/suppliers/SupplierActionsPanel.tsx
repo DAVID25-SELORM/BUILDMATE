@@ -30,7 +30,7 @@ export function SupplierActionsPanel({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [reasonMode, setReasonMode] = useState<"reject" | "information_required" | "suspend" | null>(null);
+  const [reasonMode, setReasonMode] = useState<"approve" | "reinstate" | "reject" | "information_required" | "suspend" | null>(null);
   const [reason, setReason] = useState("");
   const [levels, setLevels] = useState<VerificationLevel[]>(currentVerificationLevels);
   const [note, setNote] = useState("");
@@ -70,8 +70,7 @@ export function SupplierActionsPanel({
               className="btn-primary"
               disabled={loading}
               onClick={() => {
-                setReasonMode(null);
-                run(() => approveSupplier(organisationId, levels));
+                setReasonMode("approve");
               }}
             >
               Approve
@@ -84,7 +83,7 @@ export function SupplierActionsPanel({
           <button type="button" className="btn-secondary" disabled={loading} onClick={() => setReasonMode("suspend")}>Suspend</button>
         )}
         {status === "suspended" && (
-          <button type="button" className="btn-primary" disabled={loading} onClick={() => run(() => reinstateSupplier(organisationId))}>Reinstate</button>
+          <button type="button" className="btn-primary" disabled={loading} onClick={() => setReasonMode("reinstate")}>Reinstate</button>
         )}
       </div>
 
@@ -105,7 +104,7 @@ export function SupplierActionsPanel({
       {reasonMode && (
         <div className="rounded-xl border border-slate-200 p-4">
           <label className="label" htmlFor="reason">
-            {reasonMode === "reject" ? "Rejection reason" : reasonMode === "suspend" ? "Suspension reason" : "What information is required?"}
+            {reasonMode === "approve" ? "Approval reason" : reasonMode === "reinstate" ? "Reinstatement reason" : reasonMode === "reject" ? "Rejection reason" : reasonMode === "suspend" ? "Suspension reason" : "What information is required?"}
           </label>
           <textarea id="reason" className="input min-h-24" value={reason} onChange={(e) => setReason(e.target.value)} />
           <div className="mt-3 flex gap-3">
@@ -116,7 +115,11 @@ export function SupplierActionsPanel({
               disabled={loading}
               onClick={() =>
                 run(() =>
-                  reasonMode === "reject"
+                  reasonMode === "approve"
+                    ? approveSupplier(organisationId, levels, reason)
+                    : reasonMode === "reinstate"
+                      ? reinstateSupplier(organisationId, reason)
+                  : reasonMode === "reject"
                     ? rejectSupplier(organisationId, reason)
                     : reasonMode === "suspend"
                       ? suspendSupplier(organisationId, reason)

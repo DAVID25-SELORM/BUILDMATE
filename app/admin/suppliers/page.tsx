@@ -1,99 +1,217 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
-import { SupplierFilterBar } from "@/components/admin/suppliers/SupplierFilterBar";
-import { VERIFICATION_STATUS_LABELS, type VerificationStatus } from "@/lib/supplier/constants";
+import { ADMIN_NAV } from "@/lib/admin/navigation";
 import { createClient } from "@/lib/supabase/server";
-
-interface SupplierListRow {
+type Row = {
   id: string;
-  name: string;
-  verification_status: VerificationStatus;
-  submitted_at: string | null;
-  reviewer_id: string | null;
-}
-
-export default async function AdminSuppliersPage({
-  searchParams
+  business_name: string;
+  trading_name: string | null;
+  primary_contact: string | null;
+  phone: string | null;
+  email: string | null;
+  business_type: string | null;
+  region: string | null;
+  categories: string[];
+  verification_status: string;
+  verification_levels: string[];
+  product_count: number;
+  order_count: number;
+  total_sales: number;
+  fulfilment_rate: number;
+  average_rating: number;
+  settlement_status: string;
+  account_status: string;
+  registered_at: string;
+  performance_rating: string;
+  total_rows: number;
+};
+export default async function SuppliersPage({
+  searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const { status = "", q = "" } = await searchParams;
-  const supabase = await createClient();
-
-  let matchingIds: string[] | null = null;
-  if (q) {
-    const pattern = `%${q}%`;
-    const [{ data: byOrgName }, { data: byContactName }, { data: byEmail }] = await Promise.all([
-      supabase.from("organisations").select("id").eq("organisation_type", "supplier").ilike("name", pattern),
-      supabase.from("supplier_profiles").select("organisation_id").ilike("primary_contact_name", pattern),
-      supabase.from("supplier_profiles").select("organisation_id").ilike("business_email", pattern)
-    ]);
-    const ids = new Set<string>();
-    (byOrgName ?? []).forEach((r) => ids.add(r.id));
-    (byContactName ?? []).forEach((r) => ids.add(r.organisation_id));
-    (byEmail ?? []).forEach((r) => ids.add(r.organisation_id));
-    matchingIds = Array.from(ids);
-  }
-
-  let query = supabase
-    .from("organisations")
-    .select("id, name, verification_status, submitted_at, reviewer_id")
-    .eq("organisation_type", "supplier")
-    .order("submitted_at", { ascending: false, nullsFirst: false });
-
-  if (status) query = query.eq("verification_status", status);
-  if (matchingIds) query = query.in("id", matchingIds.length > 0 ? matchingIds : ["00000000-0000-0000-0000-000000000000"]);
-
-  const { data: suppliers } = await query;
-  const rows = (suppliers ?? []) as SupplierListRow[];
-
+  const q = await searchParams,
+    page = Math.max(1, Number(q.page) || 1),
+    s = await createClient();
+  const { data, error } = await s.rpc("admin_list_suppliers", {
+    search_text: q.q || null,
+    status_filter: q.status || null,
+    region_filter: q.region || null,
+    category_filter: q.category || null,
+    performance_filter: q.performance || null,
+    sort_by: q.sort || "newest",
+    page_number: page,
+    page_size: 25,
+  });
+  const rows = (data ?? []) as unknown as Row[],
+    total = Number(rows[0]?.total_rows ?? 0),
+    pages = Math.max(1, Math.ceil(total / 25));
   return (
-    <DashboardShell
-      title="Platform administration"
-      nav={["Overview", "Users", "Suppliers", "Catalogue", "Orders", "Quotes", "Payments", "Settlements", "Deliveries", "Disputes", "Reports", "Audit Log", "Settings"]}
-    >
-      <div className="flex items-center justify-between">
+    <DashboardShell title="Platform administration" nav={[...ADMIN_NAV]}>
+      <div className="flex flex-wrap justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black">Supplier applications</h1>
-          <p className="mt-2 text-slate-600">Review, verify and manage supplier accounts.</p>
+          <h1 className="text-3xl font-black">Suppliers</h1>
+          <p className="mt-2 text-slate-600">
+            Verification, trading controls, performance and settlements.
+          </p>
         </div>
-        <Link href="/admin" className="btn-secondary">Back to overview</Link>
+        <a
+          className="btn-secondary"
+          href={`/api/admin/suppliers/export?${new URLSearchParams(Object.entries(q).filter((x): x is [string, string] => Boolean(x[1]))).toString()}`}
+        >
+          Export CSV
+        </a>
       </div>
-
-      <div className="mt-6">
-        <SupplierFilterBar currentStatus={status} currentQuery={q} />
-      </div>
-
+      <form className="card mt-6 grid gap-3 p-4 md:grid-cols-4">
+        <input
+          className="input md:col-span-2"
+          name="q"
+          defaultValue={q.q}
+          placeholder="Business, contact or email"
+        />
+        <select className="input" name="status" defaultValue={q.status}>
+          <option value="">All statuses</option>
+          {[
+            "draft",
+            "submitted",
+            "under_review",
+            "information_required",
+            "approved",
+            "rejected",
+            "suspended",
+          ].map((x) => (
+            <option key={x}>{x.replaceAll("_", " ")}</option>
+          ))}
+        </select>
+        <input
+          className="input"
+          name="region"
+          defaultValue={q.region}
+          placeholder="Region"
+        />
+        <input
+          className="input"
+          name="category"
+          defaultValue={q.category}
+          placeholder="Product category"
+        />
+        <select
+          className="input"
+          name="performance"
+          defaultValue={q.performance}
+        >
+          <option value="">All performance</option>
+          {["excellent", "good", "needs_attention", "high_risk"].map((x) => (
+            <option key={x}>{x.replaceAll("_", " ")}</option>
+          ))}
+        </select>
+        <select className="input" name="sort" defaultValue={q.sort}>
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="highest_sales">Highest sales</option>
+          <option value="most_orders">Most orders</option>
+        </select>
+        <button className="btn-primary">Apply filters</button>
+      </form>
+      {error && (
+        <div className="mt-6 rounded-xl bg-red-50 p-4 text-red-700">
+          Unable to load suppliers: {error.message}
+        </div>
+      )}
       <div className="card mt-6 overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="w-full min-w-[1500px] text-left text-sm">
           <thead>
             <tr className="border-b">
               <th className="p-4">Supplier</th>
-              <th>Status</th>
-              <th>Submitted</th>
-              <th>Reviewer</th>
-              <th></th>
+              <th>Contact</th>
+              <th>Region</th>
+              <th>Categories</th>
+              <th>Verification</th>
+              <th>Products</th>
+              <th>Orders</th>
+              <th>Sales</th>
+              <th>Fulfilment</th>
+              <th>Rating</th>
+              <th>Settlement</th>
+              <th>Account</th>
+              <th />
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr className="border-b last:border-0" key={row.id}>
-                <td className="p-4 font-semibold">{row.name}</td>
-                <td>{VERIFICATION_STATUS_LABELS[row.verification_status]}</td>
-                <td>{row.submitted_at ? new Date(row.submitted_at).toLocaleDateString() : "—"}</td>
-                <td>{row.reviewer_id ? "Assigned" : "Unassigned"}</td>
-                <td className="p-4 text-right">
-                  <Link href={`/admin/suppliers/${row.id}`} className="font-semibold text-brand-700">Open</Link>
+            {rows.map((r) => (
+              <tr className="border-b last:border-0" key={r.id}>
+                <td className="p-4">
+                  <b>{r.business_name}</b>
+                  <p className="text-xs text-slate-500">
+                    {r.trading_name ?? r.business_type ?? "—"}
+                  </p>
+                </td>
+                <td>
+                  {r.primary_contact ?? "—"}
+                  <p className="text-xs text-slate-500">
+                    {r.email ?? r.phone ?? ""}
+                  </p>
+                </td>
+                <td>{r.region ?? "—"}</td>
+                <td>{r.categories?.join(", ") || "—"}</td>
+                <td className="capitalize">
+                  {r.verification_status.replaceAll("_", " ")}
+                </td>
+                <td>{r.product_count}</td>
+                <td>{r.order_count}</td>
+                <td>GHS {Number(r.total_sales).toFixed(2)}</td>
+                <td>{Number(r.fulfilment_rate).toFixed(1)}%</td>
+                <td>
+                  {Number(r.average_rating).toFixed(1)} ·{" "}
+                  <span className="capitalize">
+                    {r.performance_rating.replaceAll("_", " ")}
+                  </span>
+                </td>
+                <td className="capitalize">{r.settlement_status}</td>
+                <td className="capitalize">{r.account_status}</td>
+                <td>
+                  <Link
+                    className="font-semibold text-brand-700"
+                    href={`/admin/suppliers/${r.id}`}
+                  >
+                    Open
+                  </Link>
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && (
+            {!rows.length && !error && (
               <tr>
-                <td colSpan={5} className="p-6 text-center text-slate-500">No supplier applications match this filter.</td>
+                <td colSpan={13} className="p-8 text-center text-slate-500">
+                  No suppliers match these filters.
+                </td>
               </tr>
             )}
           </tbody>
         </table>
+      </div>
+      <div className="mt-4 flex justify-between text-sm">
+        <span>{total} suppliers</span>
+        <div className="flex gap-2">
+          {page > 1 && (
+            <Link
+              className="btn-secondary"
+              href={{ query: { ...q, page: String(page - 1) } }}
+            >
+              Previous
+            </Link>
+          )}
+          <span className="px-3 py-2">
+            Page {page} of {pages}
+          </span>
+          {page < pages && (
+            <Link
+              className="btn-secondary"
+              href={{ query: { ...q, page: String(page + 1) } }}
+            >
+              Next
+            </Link>
+          )}
+        </div>
       </div>
     </DashboardShell>
   );

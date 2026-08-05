@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSupplierOnboardingBundle, getSupplierReviewEvents, getSupplierReviewNotes } from "@/lib/supplier/data";
 import { BRANCH_TYPE_LABELS } from "@/lib/supplier/constants";
 import type { SupplierOrganisation } from "@/lib/supplier/types";
+import { ADMIN_NAV } from "@/lib/admin/navigation";
 
 export default async function AdminSupplierDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -37,7 +38,7 @@ export default async function AdminSupplierDetailPage({ params }: { params: Prom
   return (
     <DashboardShell
       title="Platform administration"
-      nav={["Overview", "Users", "Suppliers", "Catalogue", "Orders", "Quotes", "Payments", "Settlements", "Deliveries", "Disputes", "Reports", "Audit Log", "Settings"]}
+      nav={[...ADMIN_NAV]}
     >
       <div className="flex items-center justify-between">
         <div>

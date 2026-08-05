@@ -34,8 +34,9 @@ export async function startReview(organisationId: string): Promise<ActionResult>
   return callStatusRpc(organisationId, "under_review");
 }
 
-export async function approveSupplier(organisationId: string, verificationLevels: VerificationLevel[]): Promise<ActionResult> {
-  return callStatusRpc(organisationId, "approved", undefined, verificationLevels);
+export async function approveSupplier(organisationId: string, verificationLevels: VerificationLevel[], reason: string): Promise<ActionResult> {
+  if (reason.trim().length < 5) return { success: false, error: "An approval reason is required" };
+  return callStatusRpc(organisationId, "approved", reason, verificationLevels);
 }
 
 export async function rejectSupplier(organisationId: string, reason: string): Promise<ActionResult> {
@@ -53,8 +54,9 @@ export async function suspendSupplier(organisationId: string, reason: string): P
   return callStatusRpc(organisationId, "suspended", reason);
 }
 
-export async function reinstateSupplier(organisationId: string): Promise<ActionResult> {
-  return callStatusRpc(organisationId, "approved");
+export async function reinstateSupplier(organisationId: string, reason: string): Promise<ActionResult> {
+  if (reason.trim().length < 5) return { success: false, error: "A reinstatement reason is required" };
+  return callStatusRpc(organisationId, "approved", reason);
 }
 
 export async function assignReviewer(organisationId: string, reviewerId: string): Promise<ActionResult> {
