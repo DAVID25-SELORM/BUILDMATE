@@ -1,0 +1,1 @@
+import{describe,expect,it}from"vitest";import{cartTotal,normalizeQuantity}from"./cart";describe("cart",()=>{it("totals items",()=>expect(cartTotal([{listingId:"1",name:"x",supplier:"s",unit:"bag",price:10,quantity:3}])).toBe(30));it.each([[0,1],[2.8,2],[2000,999],[Number.NaN,1]])("normalizes %s",(input,expected)=>expect(normalizeQuantity(input)).toBe(expected));});

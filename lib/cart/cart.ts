@@ -1,0 +1,1 @@
+export type CartItem={listingId:string;name:string;supplier:string;unit:string;price:number;quantity:number};export function cartTotal(items:CartItem[]){return items.reduce((sum,i)=>sum+i.price*i.quantity,0)}export function normalizeQuantity(value:number){return Number.isFinite(value)?Math.max(1,Math.min(999,Math.floor(value))):1}

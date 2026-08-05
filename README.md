@@ -1,110 +1,59 @@
-# BuildMate Ghana Web App
+# BuildMate Ghana
 
-A production-oriented starter for a managed building-material marketplace serving customers, contractors, suppliers, drivers and administrators.
+Production-oriented managed building-material marketplace built with Next.js 16, React 19, Supabase, TypeScript and Tailwind CSS.
 
-## Included
+## Implemented workflows
 
-- Next.js App Router, TypeScript and Tailwind CSS
-- Public marketplace website
-- Shop, quotation request, calculators, about and contact pages
-- Login and registration screens
-- Customer, supplier and administrator dashboard starters
-- Supabase browser/server clients
-- PostgreSQL schema for profiles, organisations, products, supplier listings, projects, quotes, orders, payments, deliveries, reviews and audit logs
-- Starter Row-Level Security policies
-- Environment template and sample seed data
-
-## Important scope note
-
-This repository is a substantial foundation, not a finished production marketplace. Real authentication actions, product CRUD, payment initiation/webhooks, file uploads, delivery maps, messaging, notifications, advanced RLS, admin workflows and testing must be completed before launch.
+- Email/password authentication, verification, recovery, safe redirects and role workspaces
+- Supplier onboarding, private compliance documents, admin verification and audit history
+- Admin master catalogue plus approved-supplier pricing and inventory listings
+- Public database-backed shop, local cart and server-priced multi-supplier checkout
+- Customer RFQs, supplier responses, comparison and atomic quote acceptance
+- Immutable order snapshots and guarded order status lifecycle
+- Hubtel server-only checkout adapter and provider-reverified, amount-checked, idempotent callbacks
+- Supplier receivable ledger, payout recording and provider reconciliation
+- Driver assignment, guarded delivery transitions, private proof images and OTP completion
+- Durable email/SMS/WhatsApp notification outbox with preferences and retries
+- Organisation-aware RLS, forced RLS on sensitive tables and executable policy assertions
+- Unit/security tests, Playwright desktop/mobile E2E and GitHub Actions CI
+- Deep health check, privacy-conscious analytics, redacted logging and operations runbooks
+- Versioned signup consent and draft legal-policy pages requiring counsel approval
 
 ## Local setup
 
-1. Install Node.js 20 or newer.
-2. Copy `.env.example` to `.env.local`.
-3. Create a Supabase project.
-4. Add the Supabase URL and anonymous key to `.env.local`.
-5. Run `supabase/migrations/202607280001_initial_schema.sql` in the Supabase SQL editor or through Supabase CLI migrations.
-6. Optionally run `supabase/seed.sql`.
-7. Install and start:
+1. Use Node.js 22 or newer.
+2. Copy `.env.example` to `.env.local` and set the public Supabase values.
+3. Apply every SQL file in `supabase/migrations` in filename order.
+4. Run `supabase/tests/rls_assertions.sql` against the target database.
+5. Install and verify:
 
 ```bash
-npm install
-npm run dev
+npm ci
+npm run check
+npx playwright install chromium
+npm run test:e2e
 ```
 
-Open `http://localhost:3000`.
+## Production configuration
 
-## Authentication setup
+Set server-only values only in the deployment platform: `SUPABASE_SERVICE_ROLE_KEY`, Hubtel credentials and endpoint overrides, transactional SMTP values, `CRON_SECRET`, and optional SMS/WhatsApp provider values. Never expose these with a `NEXT_PUBLIC_` prefix.
 
-Real email/password auth is implemented (registration, login, logout, password reset, email verification, role-based redirects, and server-side route protection via `middleware.ts` plus per-route `layout.tsx` checks).
+Supabase Auth must allow:
 
-1. Apply migrations in order, via the Supabase SQL editor or `supabase db push`:
-   - `supabase/migrations/202607280001_initial_schema.sql`
-   - `supabase/migrations/202607290001_auth_hardening.sql` (hardens the signup trigger so a client cannot self-assign `admin`/`super_admin`, blocks non-service-role edits to `profiles.role`, and auto-creates a pending supplier organisation on supplier signup)
+- `http://localhost:3000/auth/callback`
+- `https://buildmate-six.vercel.app/auth/callback`
 
-   Both files are idempotent-safe to re-run individually, but **do not assume either has already been applied to your project** — confirm in the Supabase dashboard's Table Editor / SQL editor before relying on auth.
+Configure the Vercel cron authorization secret; Vercel supplies it as `Authorization: Bearer <CRON_SECRET>`. The included Hobby-compatible cron runs daily. Upgrade Vercel or use an authenticated external scheduler for near-real-time notifications. Confirm Hubtel callback and status URLs against the merchant's current approved API product before enabling real charges.
 
-2. In the Supabase dashboard, go to **Authentication → Providers** and make sure **Email** is enabled. Toggle **Confirm email** on if you want new users to verify their email before they can sign in (the app already handles both cases — with confirmation on, users land on `/verify-email`; with it off, they're signed in and redirected immediately).
+## Operational gates before public launch
 
-3. In **Authentication → URL Configuration**, add these to **Redirect URLs**:
-   - `http://localhost:3000/auth/callback`
-   - `https://YOUR-PRODUCTION-DOMAIN/auth/callback`
+- Have qualified Ghanaian counsel approve Terms, Privacy, Refund and Acceptable Use documents.
+- Run a real provider sandbox payment through callback, ledger and reconciliation.
+- Run a complete RFQ-to-delivery acceptance test with separate customer, supplier, admin and driver accounts.
+- Configure backups and complete the restore drill in [BACKUP_RESTORE.md](docs/operations/BACKUP_RESTORE.md).
+- Review [INCIDENT_RESPONSE.md](docs/operations/INCIDENT_RESPONSE.md), contacts and escalation ownership.
+- Rotate any credentials ever pasted into chat or terminals and update deployment secrets.
 
-4. Role-based redirects after login/registration:
-   - `customer` → `/dashboard`
-   - `supplier` → `/supplier`
-   - `admin` / `super_admin` → `/admin`
-   - `contractor` / `driver` / `professional` → `/dashboard` (no dedicated workspace yet)
+## Security invariants
 
-   Users cannot self-register as `admin` or `super_admin` — the register form only offers the roles above, and the database trigger rejects any other role value even if sent directly to the API.
-
-## Routes
-
-- `/` public homepage
-- `/shop` marketplace
-- `/request-quote` RFQ/BOQ form
-- `/calculators` estimation tools
-- `/login` and `/register`
-- `/dashboard/customer`
-- `/dashboard/supplier`
-- `/dashboard/admin`
-- `/api/health`
-
-## Next engineering priorities
-
-1. Implement Supabase sign-up, sign-in, sign-out and role redirects.
-2. Add middleware that protects dashboard routes.
-3. Build admin-controlled supplier verification.
-4. Build master catalogue and supplier-listing CRUD.
-5. Build RFQ item entry, supplier responses and quotation comparison.
-6. Build cart, checkout and immutable order snapshots.
-7. Integrate a Ghana-compatible payment provider through server-only API routes.
-8. Verify signed webhooks and make handlers idempotent.
-9. Add supplier settlement ledger and daily reconciliation.
-10. Add delivery assignment, OTP and proof-of-delivery.
-11. Add storage buckets with file type/size restrictions.
-12. Complete organisation-aware RLS and automated security tests.
-13. Add email, SMS and consented WhatsApp notifications.
-14. Add unit, integration and end-to-end tests.
-15. Add error monitoring, analytics, backups and incident response.
-
-## Suggested deployment
-
-- Frontend/server functions: Vercel
-- Database/auth/storage: Supabase
-- DNS and web security: Cloudflare
-- Transaction email: Resend or Postmark
-- SMS: approved Ghana provider
-- Maps: Google Maps or Mapbox
-- Payments: evaluate Hubtel, Paystack and Flutterwave based on current commercial and marketplace requirements
-
-## Security warnings
-
-- Do not place the Supabase service-role key in public code.
-- Do not mark an order paid from a browser redirect alone.
-- Verify payment webhooks server-side.
-- Use audit logs for financial and status changes.
-- Do not let users edit their own role.
-- Complete supplier/admin RLS before enabling real data.
-- Obtain legal review for marketplace terms, refunds, privacy and settlement handling.
+The browser never receives the service-role key. Payment redirects do not mark orders paid. Provider callbacks are revalidated server-to-server and processed idempotently. Sensitive tables force RLS. Roles cannot be self-promoted. Supplier and delivery files remain private and are accessed through policy-controlled paths.

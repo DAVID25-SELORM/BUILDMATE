@@ -1,0 +1,1 @@
+create policy "public approved supplier coverage" on public.supplier_delivery_coverage for select using(exists(select 1 from public.organisations o where o.id=organisation_id and o.organisation_type='supplier' and o.verification_status='approved'));

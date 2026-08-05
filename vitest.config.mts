@@ -4,10 +4,11 @@ import path from "path";
 export default defineConfig({
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, ".")
+      "@": path.resolve(import.meta.dirname, ".")
     }
   },
   test: {
-    environment: "node"
+    environment: "node",
+    exclude: ["e2e/**", "node_modules/**", ".next/**"]
   }
 });

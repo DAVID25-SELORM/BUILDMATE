@@ -1,0 +1,3 @@
+"use server";
+import{revalidatePath}from"next/cache";import{requireRole}from"@/lib/auth/session";import{createClient}from"@/lib/supabase/server";
+export async function resolveDispute(formData:FormData){await requireRole(["admin","super_admin"]);const id=String(formData.get("id")??""),outcome=String(formData.get("outcome")??""),notes=String(formData.get("notes")??"").trim(),reference=String(formData.get("reference")??"").trim();if(!["resolved","rejected","refunded"].includes(outcome))throw new Error("Invalid outcome");const{error}=await(await createClient()).rpc("admin_resolve_dispute",{target_dispute:id,target_outcome:outcome,target_notes:notes,target_refund_reference:reference||null});if(error)throw new Error(error.message);revalidatePath("/admin/disputes")}

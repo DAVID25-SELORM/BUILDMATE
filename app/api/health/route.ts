@@ -1,3 +1,2 @@
-export async function GET() {
-  return Response.json({ status: "ok", service: "buildmate-webapp", timestamp: new Date().toISOString() });
-}
+import{createClient}from"@/lib/supabase/server";
+export async function GET(){const started=Date.now();try{const s=await createClient();const{error}=await s.from("categories").select("id",{head:true,count:"exact"}).limit(1);if(error)throw error;return Response.json({status:"ok",service:"buildmate-webapp",checks:{database:"ok"},latencyMs:Date.now()-started,timestamp:new Date().toISOString()},{headers:{"Cache-Control":"no-store"}})}catch{return Response.json({status:"degraded",service:"buildmate-webapp",checks:{database:"failed"},latencyMs:Date.now()-started,timestamp:new Date().toISOString()},{status:503,headers:{"Cache-Control":"no-store"}})}}

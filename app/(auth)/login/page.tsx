@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { loginSchema } from "@/lib/auth/validation";
 import { getRedirectForRole } from "@/lib/auth/roles";
+import { getSafeRedirectPath } from "@/lib/auth/redirect";
 
 function LoginForm() {
   const router = useRouter();
@@ -37,8 +38,11 @@ function LoginForm() {
     }
 
     const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).single();
-    const redirectParam = searchParams.get("redirect");
-    router.push(redirectParam || getRedirectForRole(profile?.role));
+    const destination = getSafeRedirectPath(
+      searchParams.get("redirect"),
+      getRedirectForRole(profile?.role)
+    );
+    router.replace(destination);
     router.refresh();
   }
 
@@ -46,6 +50,11 @@ function LoginForm() {
     <div className="w-full max-w-md">
       <h1 className="text-3xl font-black">Welcome back</h1>
       <p className="mt-2 text-slate-600">Sign in to manage your projects and orders.</p>
+      {searchParams.get("reset") === "success" && (
+        <p className="mt-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">
+          Your password was updated. Sign in with your new password.
+        </p>
+      )}
       <form className="mt-8 space-y-5" onSubmit={handleSubmit} noValidate>
         <div>
           <label className="label" htmlFor="email">Email address</label>

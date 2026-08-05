@@ -1,0 +1,1 @@
+import{describe,expect,it}from"vitest";import{redact}from"./logger";describe("log redaction",()=>{it("redacts nested secrets",()=>expect(redact({email:"a@b.com",nested:{password:"x",apiKey:"y"}})).toEqual({email:"a@b.com",nested:{password:"[REDACTED]",apiKey:"[REDACTED]"}}))});

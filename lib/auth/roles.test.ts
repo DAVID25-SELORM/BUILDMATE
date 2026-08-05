@@ -15,9 +15,9 @@ describe("getRedirectForRole", () => {
     expect(getRedirectForRole("super_admin")).toBe("/admin");
   });
 
-  it("falls back to the shared dashboard for roles without a dedicated workspace", () => {
+  it("routes roles to dedicated or shared workspaces", () => {
     expect(getRedirectForRole("contractor")).toBe("/dashboard");
-    expect(getRedirectForRole("driver")).toBe("/dashboard");
+    expect(getRedirectForRole("driver")).toBe("/driver");
     expect(getRedirectForRole("professional")).toBe("/dashboard");
   });
 

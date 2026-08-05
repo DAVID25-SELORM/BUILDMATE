@@ -1,0 +1,3 @@
+const sensitive=/pass(word)?|token|secret|authorization|cookie|api[_-]?key/i;
+export function redact(value:unknown):unknown{if(Array.isArray(value))return value.map(redact);if(value&&typeof value==="object")return Object.fromEntries(Object.entries(value as Record<string,unknown>).map(([k,v])=>[k,sensitive.test(k)?"[REDACTED]":redact(v)]));return value}
+export function log(level:"info"|"warn"|"error",message:string,context:Record<string,unknown>={}){const record={timestamp:new Date().toISOString(),level,message,...redact(context) as object};(level==="error"?console.error:level==="warn"?console.warn:console.info)(JSON.stringify(record))}

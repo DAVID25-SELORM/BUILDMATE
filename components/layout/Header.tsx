@@ -18,7 +18,7 @@ export function Header() {
         <Link href="/login" className="hidden rounded-xl px-4 py-2 text-sm font-semibold sm:block">Sign in</Link>
         <Link href="/register" className="btn-primary py-2.5 text-sm">Get started</Link>
         <button className="rounded-xl p-2 lg:hidden" aria-label="Open menu"><Menu /></button>
-        <button className="rounded-xl p-2" aria-label="Cart"><ShoppingCart /></button>
+        <Link href="/cart" className="rounded-xl p-2" aria-label="Cart"><ShoppingCart /></Link>
       </div>
     </div>
   </header>;

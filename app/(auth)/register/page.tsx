@@ -16,6 +16,7 @@ export default function RegisterPage() {
   const [businessName, setBusinessName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -24,7 +25,7 @@ export default function RegisterPage() {
     if (loading) return;
     setError(null);
 
-    const result = registerSchema.safeParse({ fullName, phone, email, role, businessName, password, confirmPassword });
+    const result = registerSchema.safeParse({ fullName, phone, email, role, businessName, password, confirmPassword, acceptedTerms });
     if (!result.success) {
       setError(result.error.issues[0]?.message ?? "Check the form and try again");
       return;
@@ -41,7 +42,10 @@ export default function RegisterPage() {
           full_name: result.data.fullName,
           phone: result.data.phone,
           role: result.data.role,
-          business_name: result.data.role === "supplier" ? result.data.businessName : undefined
+          business_name: result.data.role === "supplier" ? result.data.businessName : undefined,
+          terms_version: "2026-08-05",
+          privacy_version: "2026-08-05",
+          terms_accepted_at: new Date().toISOString()
         }
       }
     });
@@ -100,6 +104,10 @@ export default function RegisterPage() {
           <label className="label" htmlFor="confirmPassword">Confirm password</label>
           <input id="confirmPassword" className="input" type="password" placeholder="Confirm password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required autoComplete="new-password" />
         </div>
+        <label className="flex items-start gap-3 text-sm text-slate-600">
+          <input className="mt-1" type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} required />
+          <span>I agree to the <Link className="font-semibold text-brand-700" href="/terms" target="_blank">Terms of Use</Link> and acknowledge the <Link className="font-semibold text-brand-700" href="/privacy" target="_blank">Privacy Notice</Link>.</span>
+        </label>
         {error && <p className="text-sm font-medium text-red-600" role="alert">{error}</p>}
         <button className="btn-primary w-full" type="submit" disabled={loading}>
           {loading ? "Creating account..." : "Create account"}

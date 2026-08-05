@@ -1,0 +1,1 @@
+import{describe,expect,it}from"vitest";import{renderEmail,retryDelayMinutes}from"./templates";describe("notifications",()=>{it("renders quote totals",()=>expect(renderEmail("quote_received",{total:50}).text).toContain("50"));it("caps retry delay",()=>expect(retryDelayMinutes(10)).toBe(60));});

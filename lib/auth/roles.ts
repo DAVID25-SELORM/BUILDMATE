@@ -11,12 +11,12 @@ export const ROLE_LABELS: Record<RegisterableRole, string> = {
   professional: "Professional / Artisan"
 };
 
-// Contractor, driver and professional accounts fall back to the shared dashboard
-// because no dedicated organisation workspace exists for them yet.
+// Contractor and professional accounts share the customer dashboard until their
+// dedicated organisation workspaces are introduced.
 const ROLE_REDIRECTS: Record<UserRole, string> = {
   customer: "/dashboard",
   contractor: "/dashboard",
-  driver: "/dashboard",
+  driver: "/driver",
   professional: "/dashboard",
   supplier: "/supplier",
   admin: "/admin",

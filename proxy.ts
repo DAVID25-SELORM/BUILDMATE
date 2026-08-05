@@ -2,14 +2,14 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getRedirectForRole } from "@/lib/auth/roles";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/supplier", "/admin"];
+const PROTECTED_PREFIXES = ["/dashboard", "/supplier", "/admin", "/driver"];
 const AUTH_PATHS = ["/login", "/register"];
 
 function matchesPrefix(path: string, prefixes: string[]) {
   return prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -61,6 +61,10 @@ export async function middleware(request: NextRequest) {
   }
 
   if (matchesPrefix(path, ["/supplier"]) && role !== "supplier") {
+    return NextResponse.redirect(new URL(getRedirectForRole(role), request.url));
+  }
+
+  if (matchesPrefix(path, ["/driver"]) && role !== "driver") {
     return NextResponse.redirect(new URL(getRedirectForRole(role), request.url));
   }
 

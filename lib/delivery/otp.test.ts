@@ -1,0 +1,1 @@
+import{describe,expect,it}from"vitest";import{generateDeliveryOtp,isDeliveryOtp}from"./otp";describe("delivery OTP",()=>{it("creates six digits",()=>expect(generateDeliveryOtp()).toMatch(/^\d{6}$/));it.each(["12345","1234567","abcdef"])("rejects %s",v=>expect(isDeliveryOtp(v)).toBe(false));});

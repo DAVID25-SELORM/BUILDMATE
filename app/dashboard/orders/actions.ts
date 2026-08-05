@@ -1,0 +1,6 @@
+"use server";
+import{revalidatePath}from"next/cache";import{requireUser}from"@/lib/auth/session";import{createClient}from"@/lib/supabase/server";
+type State={error?:string;message?:string}|null;
+export async function cancelOrder(orderId:string,previous:State){void previous;await requireUser();const{error}=await(await createClient()).rpc("customer_cancel_order",{target_order:orderId});if(error)return{error:error.message};revalidatePath(`/dashboard/orders/${orderId}`);return{message:"Order cancelled"}}
+export async function confirmDelivery(orderId:string,previous:State){void previous;await requireUser();const{error}=await(await createClient()).rpc("customer_confirm_delivery",{target_order:orderId});if(error)return{error:error.message};revalidatePath(`/dashboard/orders/${orderId}`);return{message:"Delivery confirmed"}}
+export async function openDispute(orderId:string,_:State,formData:FormData){await requireUser();const reason=String(formData.get("reason")??"").trim();if(reason.length<10)return{error:"Describe the problem in at least 10 characters"};const{error}=await(await createClient()).rpc("customer_open_dispute",{target_order:orderId,target_reason:reason});if(error)return{error:error.message};revalidatePath(`/dashboard/orders/${orderId}`);return{message:"Dispute submitted for review"}}

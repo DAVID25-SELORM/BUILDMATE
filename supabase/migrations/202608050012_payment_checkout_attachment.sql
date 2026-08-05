@@ -1,0 +1,3 @@
+-- Attach provider checkout details without granting direct payment-table writes.
+create or replace function public.attach_payment_checkout(target_payment uuid,target_reference text,target_url text,target_raw jsonb) returns void language plpgsql security definer set search_path=public as $$begin update public.payments p set provider_reference=target_reference,checkout_url=target_url,raw_response=target_raw,updated_at=now() where p.id=target_payment and p.status='pending' and exists(select 1 from public.orders o where o.id=p.order_id and o.customer_id=auth.uid());if not found then raise exception 'Payment attempt is unavailable';end if;end;$$;
+grant execute on function public.attach_payment_checkout(uuid,text,text,jsonb) to authenticated;

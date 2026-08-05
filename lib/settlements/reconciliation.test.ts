@@ -1,0 +1,2 @@
+import{describe,expect,it}from"vitest";import{reconciliationStatus,settlementBalance}from"./reconciliation";
+describe("settlements",()=>{it("matches within one pesewa",()=>expect(reconciliationStatus(100,100.005)).toBe("matched"));it("flags provider variance",()=>expect(reconciliationStatus(100,99)).toBe("variance"));it("calculates available balance",()=>expect(settlementBalance([{amount:100,entry_type:"sale",status:"available"},{amount:20,entry_type:"refund",status:"available"},{amount:50,entry_type:"sale",status:"paid"}])).toBe(80));});

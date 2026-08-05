@@ -15,7 +15,8 @@ export const registerSchema = z
     role: z.enum(REGISTERABLE_ROLES),
     businessName: z.string().trim().optional().default(""),
     password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string().min(1, "Confirm your password")
+    confirmPassword: z.string().min(1, "Confirm your password"),
+    acceptedTerms: z.literal(true, { errorMap: () => ({ message: "Accept the Terms and Privacy Notice" }) })
   })
   .superRefine((data, ctx) => {
     if (data.password !== data.confirmPassword) {

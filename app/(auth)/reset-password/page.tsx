@@ -38,14 +38,27 @@ export default function ResetPasswordPage() {
     setLoading(true);
     const supabase = createClient();
     const { error: updateError } = await supabase.auth.updateUser({ password: result.data.password });
-    setLoading(false);
 
     if (updateError) {
+      setLoading(false);
       setError(updateError.message);
       return;
     }
+
+    // A recovery link creates a real session. End it after the password change
+    // so the login page is reachable and the user explicitly authenticates with
+    // the new credential.
+    const { error: signOutError } = await supabase.auth.signOut();
+    setLoading(false);
+    if (signOutError) {
+      setError("Your password was updated, but we could not sign you out. Please sign out before continuing.");
+      return;
+    }
     setDone(true);
-    setTimeout(() => router.push("/login"), 2000);
+    setTimeout(() => {
+      router.replace("/login?reset=success");
+      router.refresh();
+    }, 1500);
   }
 
   if (checking) {

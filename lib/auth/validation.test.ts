@@ -20,6 +20,7 @@ describe("registerSchema", () => {
     businessName: "",
     password: "supersecret",
     confirmPassword: "supersecret"
+    ,acceptedTerms: true
   };
 
   it("accepts a valid customer registration", () => {
