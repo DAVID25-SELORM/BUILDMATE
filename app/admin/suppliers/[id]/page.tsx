@@ -16,6 +16,7 @@ import { ADMIN_NAV } from "@/lib/admin/navigation";
 import { SupplierTradingControls } from "@/components/admin/suppliers/SupplierTradingControls";
 import { startSupplierPreview } from "../actions";
 import { RecordList } from "@/components/admin/RecordList";
+import { SupplierDetailTabs } from "@/components/admin/suppliers/SupplierDetailTabs";
 
 export default async function AdminSupplierDetailPage({
   params,
@@ -37,7 +38,9 @@ export default async function AdminSupplierDetailPage({
   if (!organisation) notFound();
   const org = organisation as SupplierOrganisation;
   // Refresh only this supplier on drill-down; the list remains fast and uses the latest stored score.
-  await supabase.rpc("admin_refresh_supplier_performance", { target_supplier: id });
+  await supabase.rpc("admin_refresh_supplier_performance", {
+    target_supplier: id,
+  });
 
   const [
     bundle,
@@ -109,10 +112,22 @@ export default async function AdminSupplierDetailPage({
       .select("id,amount,status,description,created_at")
       .eq("supplier_id", id)
       .order("created_at", { ascending: false }),
-    supabase.rpc("admin_masked_supplier_settlement",{target_supplier:id}),
-    supabase.from("admin_action_history").select("id,action,reason,created_at,actor_id").eq("subject_type","supplier").eq("subject_id",id).order("created_at",{ascending:false}),
-    supabase.from("quote_requests").select("id",{head:true,count:"exact"}).eq("status","open"),
-    supabase.from("profiles").select("full_name,phone").eq("id",organisation.created_by).maybeSingle(),
+    supabase.rpc("admin_masked_supplier_settlement", { target_supplier: id }),
+    supabase
+      .from("admin_action_history")
+      .select("id,action,reason,created_at,actor_id")
+      .eq("subject_type", "supplier")
+      .eq("subject_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("quote_requests")
+      .select("id", { head: true, count: "exact" })
+      .eq("status", "open"),
+    supabase
+      .from("profiles")
+      .select("full_name,phone")
+      .eq("id", organisation.created_by)
+      .maybeSingle(),
   ]);
 
   const profile = bundle.profile;
@@ -146,13 +161,44 @@ export default async function AdminSupplierDetailPage({
           reason={org.decision_reason ?? org.suspended_reason}
           showAction={false}
         />
-        <div className="mt-3 grid gap-2 text-sm sm:grid-cols-4"><Stat label="Submitted" value={organisation.submitted_at?new Date(organisation.submitted_at).toLocaleDateString():'—'}/><Stat label="Reviewed" value={organisation.reviewed_at?new Date(organisation.reviewed_at).toLocaleDateString():'—'}/><Stat label="Approved" value={organisation.approved_at?new Date(organisation.approved_at).toLocaleDateString():'—'}/><Stat label="Verification levels" value={(organisation.verification_levels??[]).join(', ')||'None'}/></div>
+        <div className="mt-3 grid gap-2 text-sm sm:grid-cols-4">
+          <Stat
+            label="Submitted"
+            value={
+              organisation.submitted_at
+                ? new Date(organisation.submitted_at).toLocaleDateString()
+                : "—"
+            }
+          />
+          <Stat
+            label="Reviewed"
+            value={
+              organisation.reviewed_at
+                ? new Date(organisation.reviewed_at).toLocaleDateString()
+                : "—"
+            }
+          />
+          <Stat
+            label="Approved"
+            value={
+              organisation.approved_at
+                ? new Date(organisation.approved_at).toLocaleDateString()
+                : "—"
+            }
+          />
+          <Stat
+            label="Verification levels"
+            value={
+              (organisation.verification_levels ?? []).join(", ") || "None"
+            }
+          />
+        </div>
       </div>
-      <nav className="card mt-4 flex gap-2 overflow-x-auto p-2" aria-label="Supplier detail sections" role="tablist">{[["Business","#business"],["Verification","#verification"],["Branches","#branches"],["Inventory","#inventory"],["Orders & quotes","#commerce"],["Delivery","#delivery"],["Financial","#financial"],["Reviews","#reviews"],["Staff","#staff"]].map(([label,href])=><a role="tab" className="whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50" href={href} key={href}>{label}</a>)}</nav>
+      <SupplierDetailTabs />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <section className="card scroll-mt-24 p-6" id="business">
+          <section className="card p-6" id="supplier-panel-business" role="tabpanel" data-supplier-tab="business">
             <h2 className="text-lg font-bold">Business</h2>
             <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
               <Row label="Trading name" value={profile?.trading_name} />
@@ -181,7 +227,7 @@ export default async function AdminSupplierDetailPage({
             </p>
           </section>
 
-          <section className="card scroll-mt-24 p-6" id="inventory">
+          <section className="card p-6" id="supplier-panel-inventory" role="tabpanel" data-supplier-tab="inventory">
             <h2 className="text-lg font-bold">Products and inventory</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <Stat label="Total products" value={listings?.length ?? 0} />
@@ -214,19 +260,43 @@ export default async function AdminSupplierDetailPage({
             </div>
           </section>
 
-          <section className="card scroll-mt-24 p-6" id="commerce">
+          <section className="card p-6" id="supplier-panel-commerce" role="tabpanel" data-supplier-tab="commerce">
             <h2 className="text-lg font-bold">Orders and quotations</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <Stat label="Quotes submitted" value={quotes?.length ?? 0} />
-              <Stat label="Quotations received / available" value={availableRfqCount ?? 0} />
+              <Stat
+                label="Quotations received / available"
+                value={availableRfqCount ?? 0}
+              />
               <Stat
                 label="Quote win rate"
                 value={`${quotes?.length ? ((quotes.filter((x) => x.status === "accepted").length / quotes.length) * 100).toFixed(1) : 0}%`}
               />
               <Stat label="Orders" value={orders?.length ?? 0} />
-              <Stat label="Orders accepted" value={orders?.filter(x=>!["draft","awaiting_payment","awaiting_supplier_confirmation","cancelled"].includes(x.status)).length??0}/>
-              <Stat label="Orders rejected / cancelled" value={orders?.filter(x=>x.status==="cancelled").length??0}/>
-              <Stat label="Average response score" value={`${Number(metrics?.quotation_response_score??0).toFixed(1)}/100`}/>
+              <Stat
+                label="Orders accepted"
+                value={
+                  orders?.filter(
+                    (x) =>
+                      ![
+                        "draft",
+                        "awaiting_payment",
+                        "awaiting_supplier_confirmation",
+                        "cancelled",
+                      ].includes(x.status),
+                  ).length ?? 0
+                }
+              />
+              <Stat
+                label="Orders rejected / cancelled"
+                value={
+                  orders?.filter((x) => x.status === "cancelled").length ?? 0
+                }
+              />
+              <Stat
+                label="Average response score"
+                value={`${Number(metrics?.quotation_response_score ?? 0).toFixed(1)}/100`}
+              />
               <Stat
                 label="Completed"
                 value={
@@ -249,7 +319,7 @@ export default async function AdminSupplierDetailPage({
             </div>
           </section>
 
-          <section className="card scroll-mt-24 p-6" id="delivery">
+          <section className="card p-6" id="supplier-panel-delivery" role="tabpanel" data-supplier-tab="delivery">
             <h2 className="text-lg font-bold">Delivery performance</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <Stat label="Deliveries" value={deliveries?.length ?? 0} />
@@ -283,7 +353,7 @@ export default async function AdminSupplierDetailPage({
             </div>
           </section>
 
-          <section className="card p-6">
+          <section className="card p-6" data-supplier-tab="delivery">
             <h2 className="text-lg font-bold">Performance score</h2>
             <p className="mt-2 text-3xl font-black capitalize">
               {Number(metrics?.score ?? 0).toFixed(1)} ·{" "}
@@ -317,7 +387,7 @@ export default async function AdminSupplierDetailPage({
             </p>
           </section>
 
-          <section className="card scroll-mt-24 p-6" id="financial">
+          <section className="card p-6" id="supplier-panel-financial" role="tabpanel" data-supplier-tab="financial">
             <h2 className="text-lg font-bold">Financial summary</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <Stat
@@ -357,10 +427,12 @@ export default async function AdminSupplierDetailPage({
               />
             </div>
             <h3 className="mt-5 font-semibold">Settlement history</h3>
-            <RecordList records={(ledger??[]) as unknown as Record<string,unknown>[]} />
+            <RecordList
+              records={(ledger ?? []) as unknown as Record<string, unknown>[]}
+            />
           </section>
 
-          <section className="card scroll-mt-24 p-6" id="reviews">
+          <section className="card p-6" id="supplier-panel-reviews" role="tabpanel" data-supplier-tab="reviews">
             <h2 className="text-lg font-bold">Reviews and disputes</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <Stat
@@ -399,12 +471,19 @@ export default async function AdminSupplierDetailPage({
               </div>
             ))}
             <h3 className="mt-5 font-semibold">Dispute history</h3>
-            <RecordList records={(disputes??[]) as unknown as Record<string,unknown>[]} />
+            <RecordList
+              records={(disputes ?? []) as unknown as Record<string, unknown>[]}
+            />
           </section>
 
-          <section className="card scroll-mt-24 p-6" id="staff">
+          <section className="card p-6" id="supplier-panel-staff" role="tabpanel" data-supplier-tab="staff">
             <h2 className="text-lg font-bold">Staff</h2>
-            <div className="mb-3 rounded-xl bg-slate-50 p-3 text-sm"><b>Supplier owner</b><p>{owner?.full_name??"—"} · {owner?.phone??"No phone"}</p></div>
+            <div className="mb-3 rounded-xl bg-slate-50 p-3 text-sm">
+              <b>Supplier owner</b>
+              <p>
+                {owner?.full_name ?? "—"} · {owner?.phone ?? "No phone"}
+              </p>
+            </div>
             {staff?.map((x) => (
               <div
                 className="flex justify-between border-b py-3 text-sm"
@@ -429,7 +508,7 @@ export default async function AdminSupplierDetailPage({
             </p>
           </section>
 
-          <section className="card p-6">
+          <section className="card p-6" data-supplier-tab="business">
             <h2 className="text-lg font-bold">Contact</h2>
             <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
               <Row label="Contact name" value={profile?.primary_contact_name} />
@@ -451,7 +530,7 @@ export default async function AdminSupplierDetailPage({
             </dl>
           </section>
 
-          <section className="card scroll-mt-24 p-6" id="branches">
+          <section className="card p-6" id="supplier-panel-branches" role="tabpanel" data-supplier-tab="branches">
             <h2 className="text-lg font-bold">
               Branches ({bundle.branches.length})
             </h2>
@@ -468,7 +547,12 @@ export default async function AdminSupplierDetailPage({
                     {BRANCH_TYPE_LABELS[b.branch_type]} • {b.address}, {b.city},{" "}
                     {b.region}
                   </p>
-                  <p className="mt-1 text-slate-500">Contact: {b.contact_person??"—"} · {b.phone??"No phone"} · Pickup: {b.supports_pickup?"available":"not available"} · Hours: {b.operating_hours??"not supplied"}</p>
+                  <p className="mt-1 text-slate-500">
+                    Contact: {b.contact_person ?? "—"} · {b.phone ?? "No phone"}{" "}
+                    · Pickup:{" "}
+                    {b.supports_pickup ? "available" : "not available"} · Hours:{" "}
+                    {b.operating_hours ?? "not supplied"}
+                  </p>
                 </div>
               ))}
               {bundle.branches.length === 0 && (
@@ -477,23 +561,23 @@ export default async function AdminSupplierDetailPage({
             </div>
           </section>
 
-          <section className="card p-6">
+          <section className="card p-6" data-supplier-tab="financial">
             <h2 className="text-lg font-bold">Settlement</h2>
             <p className="mt-2 text-sm text-slate-600">
-              {(maskedSettlement as {configured?:boolean}|null)?.configured
-                ? `Bank account ${(maskedSettlement as {account_number_masked?:string}).account_number_masked || "on file"}, mobile money ${(maskedSettlement as {momo_number_masked?:string}).momo_number_masked || "on file"}.`
+              {(maskedSettlement as { configured?: boolean } | null)?.configured
+                ? `Bank account ${(maskedSettlement as { account_number_masked?: string }).account_number_masked || "on file"}, mobile money ${(maskedSettlement as { momo_number_masked?: string }).momo_number_masked || "on file"}.`
                 : "Not provided yet."}
             </p>
           </section>
 
-          <section className="card p-6">
+          <section className="card p-6" id="supplier-panel-verification" role="tabpanel" data-supplier-tab="verification">
             <h2 className="text-lg font-bold">Documents</h2>
             <div className="mt-3">
               <SupplierDocumentList documents={bundle.documents} />
             </div>
           </section>
 
-          <section className="card p-6">
+          <section className="card p-6" data-supplier-tab="verification">
             <h2 className="text-lg font-bold">Review history</h2>
             <div className="mt-3 space-y-3 text-sm">
               {events.map((event) => (
@@ -520,7 +604,7 @@ export default async function AdminSupplierDetailPage({
             </div>
           </section>
 
-          <section className="card p-6">
+          <section className="card p-6" data-supplier-tab="verification">
             <h2 className="text-lg font-bold">Internal notes</h2>
             <div className="mt-3 space-y-3 text-sm">
               {notes.map((n) => (
@@ -539,7 +623,14 @@ export default async function AdminSupplierDetailPage({
               )}
             </div>
           </section>
-          <section className="card p-6"><h2 className="text-lg font-bold">Administrative audit history</h2><RecordList records={(adminActions??[]) as unknown as Record<string,unknown>[]} /></section>
+          <section className="card p-6" data-supplier-tab="verification">
+            <h2 className="text-lg font-bold">Administrative audit history</h2>
+            <RecordList
+              records={
+                (adminActions ?? []) as unknown as Record<string, unknown>[]
+              }
+            />
+          </section>
         </div>
 
         <div className="space-y-6">
