@@ -68,6 +68,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(getRedirectForRole(role), request.url));
   }
 
+  if (matchesPrefix(path, ["/dashboard"]) && ["admin", "super_admin", "supplier", "driver"].includes(role ?? "")) {
+    return NextResponse.redirect(new URL(getRedirectForRole(role), request.url));
+  }
+
   return response;
 }
 
