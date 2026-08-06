@@ -67,9 +67,10 @@ export default async function SuppliersPage({
       </div>
       {q.portal === "supplier" && (
         <div className="mt-5 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-900">
-          <b>Supplier portal selection:</b> choose an account and select Open.
-          On the supplier page, enter a support reason and launch the audited,
-          read-only preview.
+          <b>Admin-only supplier portal selector.</b> Suppliers cannot access
+          this page or see other supplier accounts. Choose an organisation and
+          select Open, then record a support reason to launch its audited,
+          read-only dashboard preview.
         </div>
       )}
       <form className="card mt-6 grid gap-3 p-4 md:grid-cols-4">
