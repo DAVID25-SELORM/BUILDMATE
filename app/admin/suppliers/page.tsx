@@ -65,6 +65,13 @@ export default async function SuppliersPage({
           Export CSV
         </a>
       </div>
+      {q.portal === "supplier" && (
+        <div className="mt-5 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-900">
+          <b>Supplier portal selection:</b> choose an account and select Open.
+          On the supplier page, enter a support reason and launch the audited,
+          read-only preview.
+        </div>
+      )}
       <form className="card mt-6 grid gap-3 p-4 md:grid-cols-4">
         <input
           className="input md:col-span-2"
