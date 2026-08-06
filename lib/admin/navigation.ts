@@ -1,6 +1,34 @@
-export const ADMIN_NAV=[
- {label:"Overview",href:"/admin"},{label:"Customers",href:"/admin/customers",children:[{label:"All customers",href:"/admin/customers"},{label:"Individual customers",href:"/admin/customers?type=customer"},{label:"Contractors",href:"/admin/customers?type=contractor"},{label:"Organisations",href:"/admin/organisations"},{label:"Suspended accounts",href:"/admin/customers?status=suspended"}]},{label:"Suppliers",href:"/admin/suppliers",children:[{label:"All suppliers",href:"/admin/suppliers"},{label:"Pending verification",href:"/admin/supplier-applications"},{label:"Approved suppliers",href:"/admin/suppliers?status=approved"},{label:"Information required",href:"/admin/suppliers?status=information_required"},{label:"Rejected suppliers",href:"/admin/suppliers?status=rejected"},{label:"Suspended suppliers",href:"/admin/suppliers?status=suspended"},{label:"Supplier performance",href:"/admin/suppliers?sort=highest_sales"}]},{label:"Supplier applications",href:"/admin/supplier-applications"},
- {label:"Products",href:"/admin/catalogue"},{label:"Quotations",href:"/admin/quotations"},{label:"Orders",href:"/admin/orders"},{label:"Deliveries",href:"/admin/deliveries"},
- {label:"Payments",href:"/admin/payments"},{label:"Settlements",href:"/admin/settlements"},{label:"Returns & disputes",href:"/admin/disputes"},{label:"Reviews",href:"/admin/reviews"},
- {label:"Reports",href:"/admin/reports"},{label:"Notifications",href:"/admin/notifications"},{label:"Audit logs",href:"/admin/audit-logs"},{label:"System settings",href:"/admin/settings"}
+export const ADMIN_NAV = [
+  { label: "Overview", href: "/admin" },
+  {
+    label: "Customers",
+    href: "/admin/customers",
+    children: [
+      { label: "All Customers", href: "/admin/customers" },
+      { label: "Contractors", href: "/admin/customers?type=contractor" },
+      { label: "Organisations", href: "/admin/organisations" },
+      { label: "Suspended Accounts", href: "/admin/customers?status=suspended" },
+    ],
+  },
+  {
+    label: "Suppliers",
+    href: "/admin/suppliers",
+    children: [
+      { label: "All Suppliers", href: "/admin/suppliers" },
+      { label: "Applications", href: "/admin/supplier-applications" },
+      { label: "Approved", href: "/admin/suppliers?status=approved" },
+      { label: "Suspended", href: "/admin/suppliers?status=suspended" },
+      { label: "Performance", href: "/admin/suppliers?sort=highest_sales" },
+    ],
+  },
+  { label: "Products", href: "/admin/catalogue" },
+  { label: "Quotations", href: "/admin/quotations" },
+  { label: "Orders", href: "/admin/orders" },
+  { label: "Deliveries", href: "/admin/deliveries" },
+  { label: "Payments", href: "/admin/payments" },
+  { label: "Settlements", href: "/admin/settlements" },
+  { label: "Disputes", href: "/admin/disputes" },
+  { label: "Reports", href: "/admin/reports" },
+  { label: "Audit Logs", href: "/admin/audit-logs" },
+  { label: "Settings", href: "/admin/settings" },
 ] as const;
