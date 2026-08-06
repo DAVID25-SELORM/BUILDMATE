@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { PreviewDashboardButton } from "@/components/admin/PreviewDashboardButton";
+import { startSupplierPreview } from "./actions";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { ADMIN_NAV } from "@/lib/admin/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -187,19 +189,24 @@ export default async function SuppliersPage({
                 <td className="capitalize">{r.settlement_status}</td>
                 <td className="capitalize">{r.account_status}</td>
                 <td>
-                  <Link
-                    className="font-semibold text-brand-700"
-                    href={`/admin/suppliers/${r.id}`}
-                  >
-                    Open
-                  </Link>
+                  {q.portal === "supplier" ? (
+                    <PreviewDashboardButton
+                      targetLabel={r.business_name}
+                      portalLabel="Supplier"
+                      action={startSupplierPreview.bind(null, r.id)}
+                    />
+                  ) : (
+                    <Link className="font-semibold text-brand-700" href={`/admin/suppliers/${r.id}`}>Open</Link>
+                  )}
                 </td>
               </tr>
             ))}
             {!rows.length && !error && (
               <tr>
                 <td colSpan={13} className="p-8 text-center text-slate-500">
-                  No suppliers match these filters.
+                  {q.portal === "supplier"
+                    ? "No supplier organisations are available to preview. Register a supplier account or complete supplier organisation setup."
+                    : "No suppliers match these filters."}
                 </td>
               </tr>
             )}

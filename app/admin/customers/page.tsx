@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { PreviewDashboardButton } from "@/components/admin/PreviewDashboardButton";
+import { startCustomerPreview } from "./actions";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { ADMIN_NAV } from "@/lib/admin/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -165,12 +167,15 @@ export default async function CustomersPage({
                 </td>
                 <td className="capitalize">{r.verification_status}</td>
                 <td>
-                  <Link
-                    className="font-semibold text-brand-700"
-                    href={`/admin/customers/${r.id}`}
-                  >
-                    Open
-                  </Link>
+                  {q.portal === "customer" ? (
+                    <PreviewDashboardButton
+                      targetLabel={r.full_name}
+                      portalLabel="Customer"
+                      action={startCustomerPreview.bind(null, r.id)}
+                    />
+                  ) : (
+                    <Link className="font-semibold text-brand-700" href={`/admin/customers/${r.id}`}>Open</Link>
+                  )}
                 </td>
               </tr>
             ))}

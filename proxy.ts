@@ -76,6 +76,20 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(getRedirectForRole(role), request.url));
   }
 
+  const previewSession = request.cookies.get("admin_portal_preview")?.value;
+  const writeRequest = !["GET", "HEAD", "OPTIONS"].includes(request.method);
+  if (previewSession && writeRequest && path !== "/admin/preview/exit") {
+    await supabase.rpc("log_admin_portal_preview_access", {
+      target_session: previewSession,
+      target_route: path,
+      target_action: "preview_write_blocked",
+    });
+    return NextResponse.json(
+      { error: "This action is unavailable in Admin Preview Mode." },
+      { status: 403 },
+    );
+  }
+
   return response;
 }
 
