@@ -12,5 +12,5 @@ export async function acceptInvitation(token: string, previous: AcceptState, for
   const { data, error } = await supabase.rpc("accept_invitation", { target_token_hash: hashInvitationToken(token) });
   if (error) return { error: error.message };
   const scope = (data as { scope?: string } | null)?.scope;
-  return { redirectTo: scope === "platform" ? "/admin/staff" : "/dashboard" };
+  return { redirectTo: scope === "platform" ? "/admin/staff" : scope === "supplier" ? "/supplier" : "/dashboard/organisation/staff" };
 }

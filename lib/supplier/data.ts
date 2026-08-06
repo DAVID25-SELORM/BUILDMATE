@@ -11,6 +11,7 @@ import type {
 } from "@/lib/supplier/types";
 
 export interface SupplierMembership {
+  id?: string;
   organisationId: string;
   memberRole: string;
   organisation: SupplierOrganisation;
@@ -19,9 +20,10 @@ export interface SupplierMembership {
 export async function getSupplierMembership(supabase: SupabaseClient, userId: string): Promise<SupplierMembership | null> {
   const { data: membership } = await supabase
     .from("organisation_members")
-    .select("organisation_id, member_role")
+    .select("id, organisation_id, member_role, status")
     .eq("user_id", userId)
     .eq("is_active", true)
+    .eq("status", "active")
     .limit(1)
     .maybeSingle();
 
@@ -37,7 +39,7 @@ export async function getSupplierMembership(supabase: SupabaseClient, userId: st
 
   if (!organisation) return null;
 
-  return { organisationId: membership.organisation_id, memberRole: membership.member_role, organisation };
+  return { id: membership.id, organisationId: membership.organisation_id, memberRole: membership.member_role, organisation };
 }
 
 export interface SupplierOnboardingBundle {

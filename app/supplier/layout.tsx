@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { requireRole } from "@/lib/auth/session";
+import { requireSupplierPermission } from "@/lib/organisations/access";
 
 export default async function SupplierLayout({ children }: { children: ReactNode }) {
-  await requireRole(["supplier"]);
+  await requireSupplierPermission("supplier.profile.view");
   return <>{children}</>;
 }
