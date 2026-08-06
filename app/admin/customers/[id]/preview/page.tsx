@@ -1,7 +1,17 @@
 import { notFound } from "next/navigation";
 import { exitSupportPreview } from "@/app/admin/preview-actions";
+import { CustomerOverview } from "@/components/dashboard/CustomerOverview";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+
+type CustomerPreviewData = {
+  profile: { full_name?: string };
+  orders: { id?: string; order_number: string; status: string; total: number | string }[];
+  quotes: { status?: string }[];
+  projects: unknown[];
+};
+
 export default async function CustomerPreview({
   params,
   searchParams,
@@ -9,13 +19,13 @@ export default async function CustomerPreview({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ session?: string }>;
 }) {
-  const { id } = await params,
-    { session } = await searchParams;
+  const { id } = await params;
+  const { session } = await searchParams;
   const { user } = await requireRole(["admin", "super_admin"]);
-  const s = await createClient();
-  const { data: preview } = await s
+  const supabase = await createClient();
+  const { data: preview } = await supabase
     .from("support_view_sessions")
-    .select("id,reason,started_at,ended_at")
+    .select("id,reason")
     .eq("id", session ?? "")
     .eq("admin_id", user.id)
     .eq("subject_type", "customer")
@@ -23,54 +33,29 @@ export default async function CustomerPreview({
     .is("ended_at", null)
     .maybeSingle();
   if (!preview) notFound();
-  const { data } = await s.rpc("admin_customer_detail", {
-    target_customer: id,
-  });
+  const { data } = await supabase.rpc("admin_customer_detail", { target_customer: id });
   if (!data) notFound();
-  const d = data as unknown as {
-    profile: Record<string, unknown>;
-    orders: Record<string, unknown>[];
-    quotes: Record<string, unknown>[];
-    projects: Record<string, unknown>[];
-  };
+  const customer = data as unknown as CustomerPreviewData;
+
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="sticky top-0 z-20 bg-amber-300 px-4 py-3 text-center text-sm font-bold text-amber-950">
-        ADMIN READ-ONLY CUSTOMER PREVIEW · No purchases, payments, password or
-        security changes are available.{" "}
-        <form className="ml-3 inline" action={exitSupportPreview.bind(null,preview.id,`/admin/customers/${id}`)}><button className="underline">Exit preview</button></form>
+        ADMIN READ-ONLY CUSTOMER PREVIEW · Viewing {customer.profile.full_name ?? "customer"} · No purchases, payments, password or security changes are available.
+        <form className="ml-3 inline" action={exitSupportPreview.bind(null, preview.id, `/admin/customers/${id}`)}>
+          <button className="underline">Exit preview</button>
+        </form>
       </div>
-      <main className="container-shell py-8">
-        <h1 className="text-3xl font-black">{String(d.profile.full_name)}</h1>
-        <p className="text-slate-600">
-          Support preview started for: {preview.reason}
-        </p>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <div className="card p-5">
-            <b>Orders</b>
-            <p className="text-3xl font-black">{d.orders.length}</p>
-          </div>
-          <div className="card p-5">
-            <b>Quotations</b>
-            <p className="text-3xl font-black">{d.quotes.length}</p>
-          </div>
-          <div className="card p-5">
-            <b>Projects</b>
-            <p className="text-3xl font-black">{d.projects.length}</p>
-          </div>
-        </div>
-        <section className="card mt-6 p-5">
-          <h2 className="text-xl font-bold">Recent orders</h2>
-          {d.orders.slice(0, 10).map((o, i) => (
-            <div className="flex justify-between border-b py-3 text-sm" key={i}>
-              <span>{String(o.order_number)}</span>
-              <span className="capitalize">
-                {String(o.status).replaceAll("_", " ")}
-              </span>
-            </div>
-          ))}
-        </section>
-      </main>
+      <DashboardShell
+        title="Customer workspace · Read-only preview"
+        nav={["Overview", "Orders", "Quotations"]}
+      >
+        <p className="mb-4 text-sm text-slate-500">Support reason: {preview.reason}</p>
+        <CustomerOverview
+          projects={customer.projects.length}
+          openQuotes={customer.quotes.filter(quote => quote.status === "open").length}
+          orders={customer.orders}
+        />
+      </DashboardShell>
     </div>
   );
 }

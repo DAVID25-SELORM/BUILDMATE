@@ -1,2 +1,31 @@
-import{DashboardShell}from"@/components/dashboard/DashboardShell";import{MetricCard}from"@/components/dashboard/MetricCard";import{requireUser}from"@/lib/auth/session";import{createClient}from"@/lib/supabase/server";
-export default async function CustomerDashboard(){const{user}=await requireUser();const s=await createClient();const[{count:projects},{count:quotes},{data:orders}]=await Promise.all([s.from("projects").select("id",{count:"exact",head:true}).eq("owner_id",user.id),s.from("quote_requests").select("id",{count:"exact",head:true}).eq("requester_id",user.id).eq("status","open"),s.from("orders").select("id,order_number,status,total,updated_at").eq("customer_id",user.id).order("updated_at",{ascending:false})]);const active=(orders??[]).filter(o=>!["completed","cancelled","refunded"].includes(o.status));const committed=active.reduce((sum,o)=>sum+Number(o.total),0);return <DashboardShell title="Customer workspace" nav={[{label:"Overview",href:"/dashboard"},{label:"Orders",href:"/dashboard/orders"},{label:"Quotations",href:"/dashboard/quotes"}]}><h1 className="text-3xl font-black">Account overview</h1><p className="mt-2 text-slate-600">Live information from your BuildMate account.</p><div className="mt-6 grid gap-4 md:grid-cols-3"><MetricCard label="Projects" value={String(projects??0)} detail="Saved projects"/><MetricCard label="Open RFQs" value={String(quotes??0)} detail="Awaiting supplier selection"/><MetricCard label="Active orders" value={String(active.length)} detail={`GHS ${committed.toFixed(2)} committed`}/></div><div className="card mt-6 p-6"><h2 className="text-xl font-bold">Recent orders</h2><div className="mt-4 divide-y">{(orders??[]).slice(0,5).map(o=><div className="flex justify-between py-4 text-sm" key={o.id}><span>{o.order_number}</span><span className="capitalize">{o.status.replaceAll("_"," ")}</span></div>)}{!orders?.length&&<p className="py-4 text-sm text-slate-500">No order activity yet.</p>}</div></div></DashboardShell>}
+import { CustomerOverview } from "@/components/dashboard/CustomerOverview";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { requireUser } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
+
+export default async function CustomerDashboard() {
+  const { user } = await requireUser();
+  const supabase = await createClient();
+  const [{ count: projects }, { count: quotes }, { data: orders }] = await Promise.all([
+    supabase.from("projects").select("id", { count: "exact", head: true }).eq("owner_id", user.id),
+    supabase.from("quote_requests").select("id", { count: "exact", head: true }).eq("requester_id", user.id).eq("status", "open"),
+    supabase.from("orders").select("id,order_number,status,total,updated_at").eq("customer_id", user.id).order("updated_at", { ascending: false }),
+  ]);
+
+  return (
+    <DashboardShell
+      title="Customer workspace"
+      nav={[
+        { label: "Overview", href: "/dashboard" },
+        { label: "Orders", href: "/dashboard/orders" },
+        { label: "Quotations", href: "/dashboard/quotes" },
+      ]}
+    >
+      <CustomerOverview
+        projects={projects ?? 0}
+        openQuotes={quotes ?? 0}
+        orders={orders ?? []}
+      />
+    </DashboardShell>
+  );
+}

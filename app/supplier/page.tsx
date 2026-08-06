@@ -1,2 +1,65 @@
-import{redirect}from"next/navigation";import{DashboardShell}from"@/components/dashboard/DashboardShell";import{MetricCard}from"@/components/dashboard/MetricCard";import{StatusBanner}from"@/components/supplier/StatusBanner";import{createClient}from"@/lib/supabase/server";import{getSupplierMembership}from"@/lib/supplier/data";import{getSupplierDashboardDecision}from"@/lib/supplier/routing";
-export default async function SupplierDashboardPage(){const s=await createClient();const{data:{user}}=await s.auth.getUser();if(!user)redirect("/login");const membership=await getSupplierMembership(s,user.id);if(!membership)redirect("/supplier/onboarding");const{organisation}=membership;const decision=getSupplierDashboardDecision(organisation.verification_status);if(decision.action==="redirect_onboarding")redirect("/supplier/onboarding");if(decision.action==="show_status")return <DashboardShell title="Supplier portal" nav={[{label:"Overview",href:"/supplier"},{label:"Application status",href:"/supplier/onboarding"}]}><h1 className="text-3xl font-black">Supplier overview</h1><p className="mt-2 text-slate-600">Trading tools unlock once your application is approved.</p><div className="mt-6"><StatusBanner status={organisation.verification_status} reason={organisation.decision_reason??organisation.suspended_reason}/></div></DashboardShell>;const[{data:orders},{count:listings},{data:quotes}]=await Promise.all([s.from("orders").select("id,order_number,status,total,created_at").eq("supplier_id",organisation.id).order("created_at",{ascending:false}),s.from("supplier_listings").select("id",{count:"exact",head:true}).eq("supplier_id",organisation.id).eq("is_active",true),s.from("supplier_quotes").select("id,status").eq("supplier_id",organisation.id)]);const completed=(orders??[]).filter(o=>o.status==="completed");const revenue=completed.reduce((sum,o)=>sum+Number(o.total),0);const active=(orders??[]).filter(o=>!["completed","cancelled","refunded"].includes(o.status));const responded=(quotes??[]).length,won=(quotes??[]).filter(q=>q.status==="accepted").length;return <DashboardShell title="Supplier portal" nav={[{label:"Overview",href:"/supplier"},{label:"Orders",href:"/supplier/orders"},{label:"Quotation requests",href:"/supplier/quotes"},{label:"Products",href:"/supplier/products"},{label:"Settlements",href:"/supplier/settlements"}]}><h1 className="text-3xl font-black">Supplier overview</h1><p className="mt-2 text-slate-600">Live trading and fulfilment information.</p><div className="mt-6 grid gap-4 md:grid-cols-4"><MetricCard label="Completed revenue" value={`GHS ${revenue.toFixed(2)}`} detail="Recorded completed orders"/><MetricCard label="Open orders" value={String(active.length)} detail="Require fulfilment"/><MetricCard label="Quote win rate" value={responded?`${Math.round(won/responded*100)}%`:"—"} detail={`${responded} quotations submitted`}/><MetricCard label="Active listings" value={String(listings??0)} detail="Visible catalogue offers"/></div><div className="card mt-6 p-6"><h2 className="text-xl font-bold">Recent orders</h2><div className="mt-4 divide-y">{(orders??[]).slice(0,5).map(o=><div className="flex justify-between py-4 text-sm" key={o.id}><span>{o.order_number}</span><span className="capitalize">{o.status.replaceAll("_"," ")} · GHS {Number(o.total).toFixed(2)}</span></div>)}{!orders?.length&&<p className="py-4 text-sm text-slate-500">No orders yet.</p>}</div></div></DashboardShell>}
+import { redirect } from "next/navigation";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { SupplierOverview } from "@/components/dashboard/SupplierOverview";
+import { StatusBanner } from "@/components/supplier/StatusBanner";
+import { createClient } from "@/lib/supabase/server";
+import { getSupplierMembership } from "@/lib/supplier/data";
+import { getSupplierDashboardDecision } from "@/lib/supplier/routing";
+
+export default async function SupplierDashboardPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const membership = await getSupplierMembership(supabase, user.id);
+  if (!membership) redirect("/supplier/onboarding");
+  const { organisation } = membership;
+  const decision = getSupplierDashboardDecision(organisation.verification_status);
+  if (decision.action === "redirect_onboarding") redirect("/supplier/onboarding");
+  if (decision.action === "show_status") {
+    return (
+      <DashboardShell
+        title="Supplier portal"
+        nav={[
+          { label: "Overview", href: "/supplier" },
+          { label: "Application status", href: "/supplier/onboarding" },
+        ]}
+      >
+        <h1 className="text-3xl font-black">Supplier overview</h1>
+        <p className="mt-2 text-slate-600">
+          Trading tools unlock once your application is approved.
+        </p>
+        <div className="mt-6">
+          <StatusBanner
+            status={organisation.verification_status}
+            reason={organisation.decision_reason ?? organisation.suspended_reason}
+          />
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  const [{ data: orders }, { count: listings }, { data: quotes }] = await Promise.all([
+    supabase.from("orders").select("id,order_number,status,total,created_at").eq("supplier_id", organisation.id).order("created_at", { ascending: false }),
+    supabase.from("supplier_listings").select("id", { count: "exact", head: true }).eq("supplier_id", organisation.id).eq("is_active", true),
+    supabase.from("supplier_quotes").select("status").eq("supplier_id", organisation.id),
+  ]);
+
+  return (
+    <DashboardShell
+      title="Supplier portal"
+      nav={[
+        { label: "Overview", href: "/supplier" },
+        { label: "Orders", href: "/supplier/orders" },
+        { label: "Quotation requests", href: "/supplier/quotes" },
+        { label: "Products", href: "/supplier/products" },
+        { label: "Settlements", href: "/supplier/settlements" },
+      ]}
+    >
+      <SupplierOverview
+        orders={orders ?? []}
+        activeListings={listings ?? 0}
+        quoteStatuses={(quotes ?? []).map(quote => quote.status)}
+      />
+    </DashboardShell>
+  );
+}
