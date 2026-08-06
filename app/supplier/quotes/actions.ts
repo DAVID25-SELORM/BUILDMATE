@@ -1,12 +1,10 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { requireRole } from "@/lib/auth/session";
-import { createClient } from "@/lib/supabase/server";
-import { getSupplierMembership } from "@/lib/supplier/data";
+import { requireSupplierPermission } from "@/lib/organisations/access";
 import { supplierQuoteSchema } from "@/lib/rfq/validation";
 
 export async function submitSupplierQuote(formData: FormData) {
-  const { user } = await requireRole(["supplier"]); const supabase = await createClient(); const membership = await getSupplierMembership(supabase, user.id);
+  const {supabase,membership}=await requireSupplierPermission("quotations.submit");
   if (!membership || membership.organisation.verification_status !== "approved") return { error: "Supplier approval is required" };
   const parsed = supplierQuoteSchema.safeParse({ quoteRequestId: formData.get("quoteRequestId"), subtotal: formData.get("subtotal"), deliveryFee: formData.get("deliveryFee"), validUntil: formData.get("validUntil") ?? "", deliveryDays: formData.get("deliveryDays"), notes: formData.get("notes") ?? "" });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid quotation" };

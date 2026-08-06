@@ -6,6 +6,7 @@ export function PortalPreviewShell({
   targetName,
   reason,
   referenceNumber,
+  previewRole,
   nav,
   children,
 }: {
@@ -14,6 +15,7 @@ export function PortalPreviewShell({
   targetName: string;
   reason: string;
   referenceNumber: string | null;
+  previewRole?: string | null;
   nav: { label: string; section?: string }[];
   children: React.ReactNode;
 }) {
@@ -27,6 +29,7 @@ export function PortalPreviewShell({
             <span className="ml-3">Viewing {portalType === "customer" ? "Customer" : "Supplier"} Portal: {targetName}</span>
             <span className="ml-3">Reason: {reason}</span>
             {referenceNumber && <span className="ml-3">Reference: {referenceNumber}</span>}
+            {previewRole && <span className="ml-3">Role: {previewRole.replaceAll("_", " ")}</span>}
           </div>
           <form action="/admin/preview/exit" method="post">
             <input type="hidden" name="returnTo" value={portalType === "customer" ? `/admin/customers/${targetId}` : `/admin/suppliers/${targetId}`} />

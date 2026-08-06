@@ -49,6 +49,7 @@ export async function proxy(request: NextRequest) {
   let role: string | null = null;
   let accountStatus: string | null = null;
   let hasPlatformAccess = false;
+  let hasSupplierAccess = false;
   if (isProtected || isAuthPath) {
     const { data: profile } = await supabase.from("profiles").select("role,account_status").eq("id", user.id).single();
     role = profile?.role ?? null;
@@ -56,6 +57,10 @@ export async function proxy(request: NextRequest) {
     if (matchesPrefix(path, ["/admin"]) || isAuthPath) {
       const { data } = await supabase.rpc("has_platform_access");
       hasPlatformAccess = data === true;
+    }
+    if (matchesPrefix(path,["/supplier"]) || isAuthPath) {
+      const {data}=await supabase.rpc("has_supplier_access");
+      hasSupplierAccess=data===true;
     }
   }
 
@@ -69,7 +74,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(getRedirectForRole(role), request.url));
   }
 
-  if (matchesPrefix(path, ["/supplier"]) && role !== "supplier") {
+  if (matchesPrefix(path, ["/supplier"]) && !hasSupplierAccess) {
     return NextResponse.redirect(new URL(getRedirectForRole(role), request.url));
   }
 
@@ -77,7 +82,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(getRedirectForRole(role), request.url));
   }
 
-  if (matchesPrefix(path, ["/dashboard"]) && ["admin", "super_admin", "supplier", "driver"].includes(role ?? "")) {
+  if (matchesPrefix(path, ["/dashboard"]) && role === "driver") {
     return NextResponse.redirect(new URL(getRedirectForRole(role), request.url));
   }
 

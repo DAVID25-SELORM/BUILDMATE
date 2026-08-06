@@ -11,6 +11,10 @@ export type PortalPreviewSession = {
   reason: string;
   reference_number: string | null;
   expires_at: string;
+  preview_role_key: string | null;
+  preview_branch_id: string | null;
+  preview_warehouse_id: string | null;
+  preview_project_id: string | null;
 };
 
 export async function requirePortalPreview(
@@ -24,7 +28,7 @@ export async function requirePortalPreview(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("admin_portal_preview_sessions")
-    .select("id,admin_user_id,portal_type,target_user_id,target_organisation_id,reason,reference_number,expires_at,status")
+    .select("id,admin_user_id,portal_type,target_user_id,target_organisation_id,reason,reference_number,expires_at,status,preview_role_key,preview_branch_id,preview_warehouse_id,preview_project_id")
     .eq("id", sessionId)
     .eq("admin_user_id", user.id)
     .eq("portal_type", portalType)

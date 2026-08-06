@@ -2,10 +2,13 @@ import { CustomerOverview } from "@/components/dashboard/CustomerOverview";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { getCustomerOrganisationMembership } from "@/lib/organisations/access";
+import { customerNavigation } from "@/lib/organisations/navigation";
 
 export default async function CustomerDashboard() {
   const { user } = await requireUser();
   const supabase = await createClient();
+  const {membership}=await getCustomerOrganisationMembership();
   const [{ count: projects }, { count: quotes }, { data: orders }] = await Promise.all([
     supabase.from("projects").select("id", { count: "exact", head: true }).eq("owner_id", user.id),
     supabase.from("quote_requests").select("id", { count: "exact", head: true }).eq("requester_id", user.id).eq("status", "open"),
@@ -15,11 +18,7 @@ export default async function CustomerDashboard() {
   return (
     <DashboardShell
       title="Customer workspace"
-      nav={[
-        { label: "Overview", href: "/dashboard" },
-        { label: "Orders", href: "/dashboard/orders" },
-        { label: "Quotations", href: "/dashboard/quotes" },
-      ]}
+      nav={await customerNavigation(membership?.organisation_id)}
     >
       <CustomerOverview
         projects={projects ?? 0}

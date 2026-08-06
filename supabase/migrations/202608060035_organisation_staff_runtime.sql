@@ -85,7 +85,7 @@ language plpgsql stable security definer set search_path=public,auth as $$
 declare target_scope text:=public.organisation_scope(target_organisation);
 begin
  if not public.has_permission(case when target_scope='supplier' then 'supplier.staff.view' else 'organisation.view' end,target_organisation) then raise exception 'Not authorised'; end if;
- return query select m.id,m.user_id,p.full_name,u.email,p.phone,r.key,r.label,m.status,m.joined_at,
+ return query select m.id,m.user_id,p.full_name::text,u.email::text,p.phone::text,r.key::text,r.label::text,m.status::text,m.joined_at,
    coalesce((select array_agg(b.name order by b.name) from public.branch_memberships bm join public.supplier_branches b on b.id=bm.branch_id where bm.membership_id=m.id),'{}'),
    coalesce((select array_agg(w.name order by w.name) from public.warehouse_memberships wm join public.supplier_warehouses w on w.id=wm.warehouse_id where wm.membership_id=m.id),'{}'),
    coalesce((select array_agg(pr.name order by pr.name) from public.project_memberships pm join public.projects pr on pr.id=pm.project_id where pm.membership_id=m.id),'{}'),

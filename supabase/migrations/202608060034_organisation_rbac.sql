@@ -180,7 +180,7 @@ select r.id,p.id from grants g join public.organisation_roles r on r.scope='cust
 update public.organisation_members m set role_id=r.id,
   member_role=case when o.organisation_type='supplier' then (case when m.member_role='owner' then 'owner' else 'administrator' end) else (case when m.member_role='owner' then 'organisation_owner' else 'viewer' end) end,
   status=case when m.is_active then 'active' else 'suspended' end,
-  joined_at=coalesce(joined_at,created_at)
+  joined_at=coalesce(m.joined_at,m.created_at)
 from public.organisations o cross join public.organisation_roles r
 where o.id=m.organisation_id
   and r.scope=case when o.organisation_type='supplier' then 'supplier' else 'customer' end
@@ -194,7 +194,7 @@ create or replace function public.has_permission(target_permission text,target_o
 returns boolean language sql stable security definer set search_path=public as $$
  select case when auth.uid() is null then false
  when target_organisation is null then
-   public.is_super_admin() or exists(
+   exists(
      select 1 from public.platform_staff_memberships m
      join public.platform_roles r on r.id=m.platform_role_id
      join public.platform_role_permissions rp on rp.role_id=r.id
@@ -226,6 +226,25 @@ $$;
 create or replace function public.has_customer_organisation_access() returns boolean language sql stable security definer set search_path=public as $$
  select exists(select 1 from public.organisation_members m join public.organisations o on o.id=m.organisation_id where m.user_id=auth.uid() and m.status='active' and m.is_active and o.organisation_type<>'supplier');
 $$;
+
+create or replace function public.normalise_organisation_membership() returns trigger language plpgsql security definer set search_path=public as $$
+declare target_scope text; resolved_role public.organisation_roles;
+begin
+ target_scope:=public.organisation_scope(new.organisation_id);
+ if new.role_id is null then
+   select * into resolved_role from public.organisation_roles where scope=target_scope and key=case
+     when target_scope='supplier' and new.member_role='owner' then 'owner'
+     when target_scope='supplier' then 'viewer'
+     when new.member_role in('owner','organisation_owner') then 'organisation_owner'
+     else 'viewer' end;
+   new.role_id:=resolved_role.id; new.member_role:=resolved_role.key;
+ end if;
+ new.is_active:=(new.status='active');
+ if new.status='active' and new.joined_at is null then new.joined_at:=now(); end if;
+ new.updated_at:=now();
+ return new;
+end;$$;
+create trigger normalise_organisation_membership before insert or update on public.organisation_members for each row execute function public.normalise_organisation_membership();
 
 create or replace function public.prevent_final_organisation_owner() returns trigger language plpgsql security definer set search_path=public as $$
 declare old_owner boolean; new_owner boolean; active_owners integer;

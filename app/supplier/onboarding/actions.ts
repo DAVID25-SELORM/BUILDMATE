@@ -28,6 +28,8 @@ async function getEditableMembership(organisationId: string) {
   if (!membership || membership.organisationId !== organisationId) {
     return { supabase, membership: null, error: "You do not have access to this application." } as const;
   }
+  const {data:canEdit}=await supabase.rpc("has_permission",{target_permission:"supplier.profile.edit",target_organisation:organisationId});
+  if(!canEdit)return{supabase,membership:null,error:"Your supplier role cannot edit this application."} as const;
   if (membership.organisation.verification_status !== "draft" && membership.organisation.verification_status !== "information_required") {
     return { supabase, membership: null, error: "This application can no longer be edited." } as const;
   }

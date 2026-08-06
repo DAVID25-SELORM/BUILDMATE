@@ -16,7 +16,7 @@ export async function requireSupplierPermission(permission: string) {
 export async function getCustomerOrganisationMembership() {
   const { user } = await requireUser();
   const supabase = await createClient();
-  const { data } = await supabase.from("organisation_members").select("id,organisation_id,member_role,status,organisations(id,name,organisation_type)").eq("user_id",user.id).eq("status","active").eq("is_active",true).neq("organisations.organisation_type","supplier").limit(1).maybeSingle();
+  const { data } = await supabase.from("organisation_members").select("id,organisation_id,member_role,status,organisations!inner(id,name,organisation_type)").eq("user_id",user.id).eq("status","active").eq("is_active",true).neq("organisations.organisation_type","supplier").limit(1).maybeSingle();
   return { user,supabase,membership:data };
 }
 

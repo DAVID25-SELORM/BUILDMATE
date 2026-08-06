@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { organisationRoleOptions } from "@/lib/permissions/organisation";
 
 export function PreviewDashboardButton({
   targetLabel,
@@ -21,6 +22,7 @@ export function PreviewDashboardButton({
         <form action={action} className="p-6">
           <h2 className="text-xl font-black">Preview {portalLabel} Portal</h2>
           <p className="mt-2 text-sm text-slate-600">Selected: <b>{targetLabel}</b></p>
+          {portalLabel === "Supplier" && <label className="mt-5 block"><span className="label">Preview as role</span><select className="input" name="previewRole" defaultValue="owner">{organisationRoleOptions("supplier").map(role=><option key={role.key} value={role.key}>{role.label}</option>)}</select></label>}
           <label className="mt-5 block">
             <span className="label">Support or review reason</span>
             <textarea className="input min-h-24" name="reason" minLength={5} required />

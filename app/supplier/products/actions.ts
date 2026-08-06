@@ -1,15 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireRole } from "@/lib/auth/session";
-import { createClient } from "@/lib/supabase/server";
-import { getSupplierMembership } from "@/lib/supplier/data";
+import { requireSupplierPermission } from "@/lib/organisations/access";
 import { listingSchema } from "@/lib/catalogue/validation";
 
 export async function saveListing(formData: FormData) {
-  const { user } = await requireRole(["supplier"]);
-  const supabase = await createClient();
-  const membership = await getSupplierMembership(supabase, user.id);
+  const { supabase,membership } = await requireSupplierPermission(formData.get("id") ? "products.edit" : "products.create");
   if (!membership || membership.organisation.verification_status !== "approved") return { error: "Only approved suppliers can manage listings" };
   const parsed = listingSchema.safeParse({
     id: formData.get("id") ?? "", productId: formData.get("productId"), sku: formData.get("sku") ?? "",
@@ -32,9 +28,8 @@ export async function saveListing(formData: FormData) {
 }
 
 export async function setListingActive(listingId: string, isActive: boolean) {
-  await requireRole(["supplier"]);
-  const supabase = await createClient();
-  const { error } = await supabase.from("supplier_listings").update({ is_active: isActive, updated_at: new Date().toISOString() }).eq("id", listingId);
+  const {supabase,membership}=await requireSupplierPermission("products.publish");
+  const { error } = await supabase.from("supplier_listings").update({ is_active: isActive, updated_at: new Date().toISOString() }).eq("id", listingId).eq("supplier_id",membership.organisationId);
   if (error) throw new Error(error.message);
   revalidatePath("/supplier/products"); revalidatePath("/shop");
 }

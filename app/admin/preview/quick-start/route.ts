@@ -99,6 +99,9 @@ export async function POST(request: Request) {
   if (error || !sessionId) {
     return NextResponse.redirect(new URL(listFallback, request.url), 303);
   }
+  if (portalType === "supplier") {
+    await supabase.rpc("configure_admin_portal_preview_context", { target_session: sessionId, target_role_key: "owner", target_branch: null, target_warehouse: null, target_project: null });
+  }
 
   (await cookies()).set("admin_portal_preview", String(sessionId), {
     httpOnly: true,

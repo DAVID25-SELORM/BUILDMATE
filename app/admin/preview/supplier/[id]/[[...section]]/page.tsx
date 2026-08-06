@@ -13,6 +13,10 @@ export default async function SupplierPortalPreview({ params }: { params: Promis
   const section = segments?.[0] ?? "overview";
   if (!['overview','orders','quotes','products','settlements','application-status'].includes(section)) notFound();
   const { supabase, session } = await requirePortalPreview("supplier", id, `/admin/preview/supplier/${id}/${section}`);
+  const permissionBySection:Record<string,string>={orders:"orders.view",quotes:"quotations.view",products:"products.view",settlements:"settlements.view"};
+  const permissionChecks=await Promise.all(Object.entries(permissionBySection).map(async([key,permission])=>[key,(await supabase.rpc("preview_role_has_permission",{target_session:session.id,target_permission:permission})).data===true] as const));
+  const visible=Object.fromEntries(permissionChecks) as Record<string,boolean>;
+  if(permissionBySection[section]&&!visible[section])notFound();
   const [{data:organisation},{data:orders},{count:listingsCount},{data:quotes},{data:listings},{data:requests},{data:ledger}] = await Promise.all([
     supabase.from("organisations").select("name,verification_status,decision_reason,suspended_reason").eq("id",id).eq("organisation_type","supplier").maybeSingle(),
     supabase.from("orders").select("id,order_number,status,total,delivery_address,created_at").eq("supplier_id",id).order("created_at",{ascending:false}),
@@ -33,6 +37,6 @@ export default async function SupplierPortalPreview({ params }: { params: Promis
   else if(section==='settlements') content=<SupplierSettlementsView entries={entries} balance={settlementBalance(entries)}/>;
   else if(decision.action==='show_dashboard') content=<SupplierOverview orders={orders??[]} activeListings={listingsCount??0} quoteStatuses={(quotes??[]).map(quote=>quote.status)}/>;
   else content=<><h1 className="text-3xl font-black">Supplier overview</h1><p className="mt-2 text-slate-600">Trading tools unlock once the application is approved.</p><div className="mt-6"><StatusBanner status={status} reason={organisation.decision_reason??organisation.suspended_reason} showAction={false}/></div></>;
-  const nav=decision.action==='show_dashboard'?[{label:"Overview"},{label:"Orders",section:"orders"},{label:"Quotation requests",section:"quotes"},{label:"Products",section:"products"},{label:"Settlements",section:"settlements"}]:[{label:"Overview"},{label:"Application status",section:"application-status"}];
-  return <PortalPreviewShell portalType="supplier" targetId={id} targetName={organisation.name} reason={session.reason} referenceNumber={session.reference_number} nav={nav}>{content}</PortalPreviewShell>;
+  const nav=decision.action==='show_dashboard'?[{label:"Overview"},visible.orders&&{label:"Orders",section:"orders"},visible.quotes&&{label:"Quotation requests",section:"quotes"},visible.products&&{label:"Products",section:"products"},visible.settlements&&{label:"Settlements",section:"settlements"}].filter(Boolean) as {label:string;section?:string}[]:[{label:"Overview"},{label:"Application status",section:"application-status"}];
+  return <PortalPreviewShell portalType="supplier" targetId={id} targetName={organisation.name} reason={session.reason} referenceNumber={session.reference_number} previewRole={session.preview_role_key} nav={nav}>{content}</PortalPreviewShell>;
 }
