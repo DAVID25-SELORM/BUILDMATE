@@ -18,8 +18,10 @@ describe("admin portal preview security", () => {
   it("audits preview start, access, exit and blocked writes", () => {
     for (const action of ["portal_preview_started", "preview_page_opened", "portal_preview_exited", "preview_write_blocked"]) expect(`${migration}\n${proxy}`).toContain(action);
   });
-  it("blocks non-exit writes while preview cookie is active", () => {
-    expect(proxy).toContain('path !== "/admin/preview/exit"');
+  it("blocks writes except exact preview lifecycle endpoints", () => {
+    expect(proxy).toContain('"/admin/preview/exit"');
+    expect(proxy).toContain('"/admin/preview/quick-start"');
+    expect(proxy).toContain("!previewLifecycleRequest");
     expect(proxy).toContain("This action is unavailable in Admin Preview Mode.");
   });
   it("shares the customer overview between self and preview", () => {

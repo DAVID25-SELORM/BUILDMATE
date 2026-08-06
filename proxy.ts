@@ -78,7 +78,11 @@ export async function proxy(request: NextRequest) {
 
   const previewSession = request.cookies.get("admin_portal_preview")?.value;
   const writeRequest = !["GET", "HEAD", "OPTIONS"].includes(request.method);
-  if (previewSession && writeRequest && path !== "/admin/preview/exit") {
+  const previewLifecycleRequest = [
+    "/admin/preview/exit",
+    "/admin/preview/quick-start",
+  ].includes(path);
+  if (previewSession && writeRequest && !previewLifecycleRequest) {
     await supabase.rpc("log_admin_portal_preview_access", {
       target_session: previewSession,
       target_route: path,
