@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { requireRole } from "@/lib/auth/session";
+import { requirePlatformAccess } from "@/lib/auth/permissions";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  await requireRole(["admin", "super_admin"]);
+  await requirePlatformAccess();
   return <>{children}</>;
 }

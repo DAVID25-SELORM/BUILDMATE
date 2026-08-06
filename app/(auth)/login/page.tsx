@@ -37,10 +37,13 @@ function LoginForm() {
       return;
     }
 
-    const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).single();
+    const [{ data: profile }, { data: platformAccess }] = await Promise.all([
+      supabase.from("profiles").select("role").eq("id", data.user.id).single(),
+      supabase.rpc("has_platform_access"),
+    ]);
     const destination = getSafeRedirectPath(
       searchParams.get("redirect"),
-      getRedirectForRole(profile?.role)
+      platformAccess ? "/admin" : getRedirectForRole(profile?.role)
     );
     router.replace(destination);
     router.refresh();

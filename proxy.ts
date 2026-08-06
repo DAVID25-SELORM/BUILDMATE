@@ -48,19 +48,24 @@ export async function proxy(request: NextRequest) {
 
   let role: string | null = null;
   let accountStatus: string | null = null;
+  let hasPlatformAccess = false;
   if (isProtected || isAuthPath) {
     const { data: profile } = await supabase.from("profiles").select("role,account_status").eq("id", user.id).single();
     role = profile?.role ?? null;
     accountStatus = profile?.account_status ?? null;
+    if (matchesPrefix(path, ["/admin"]) || isAuthPath) {
+      const { data } = await supabase.rpc("has_platform_access");
+      hasPlatformAccess = data === true;
+    }
   }
 
   if (["suspended","deactivated"].includes(accountStatus??"") && path!=="/account-restricted") return NextResponse.redirect(new URL("/account-restricted",request.url));
 
   if (isAuthPath) {
-    return NextResponse.redirect(new URL(getRedirectForRole(role), request.url));
+    return NextResponse.redirect(new URL(hasPlatformAccess ? "/admin" : getRedirectForRole(role), request.url));
   }
 
-  if (matchesPrefix(path, ["/admin"]) && role !== "admin" && role !== "super_admin") {
+  if (matchesPrefix(path, ["/admin"]) && !hasPlatformAccess) {
     return NextResponse.redirect(new URL(getRedirectForRole(role), request.url));
   }
 
