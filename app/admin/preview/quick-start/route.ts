@@ -82,7 +82,7 @@ export async function POST(request: Request) {
 
   const targetId = await findQuickPreviewTarget(supabase, portalType);
   if (!targetId) {
-    return NextResponse.redirect(new URL(listFallback, request.url));
+    return NextResponse.redirect(new URL(listFallback, request.url), 303);
   }
 
   const h = await headers();
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
   });
 
   if (error || !sessionId) {
-    return NextResponse.redirect(new URL(listFallback, request.url));
+    return NextResponse.redirect(new URL(listFallback, request.url), 303);
   }
 
   (await cookies()).set("admin_portal_preview", String(sessionId), {
@@ -108,5 +108,5 @@ export async function POST(request: Request) {
     maxAge: 1800
   });
 
-  return NextResponse.redirect(new URL(`/admin/preview/${portalType}/${targetId}`, request.url));
+  return NextResponse.redirect(new URL(`/admin/preview/${portalType}/${targetId}`, request.url), 303);
 }
