@@ -5,6 +5,6 @@ export async function supplierNavigation(organisationId:string){
  return [{label:"Overview",href:"/supplier"},checks[0]&&{label:"Orders",href:"/supplier/orders"},checks[1]&&{label:"Quotation requests",href:"/supplier/quotes"},checks[2]&&{label:"Products",href:"/supplier/products"},checks[3]&&{label:"Settlements",href:"/supplier/settlements"},checks[4]&&{label:"Staff",href:"/supplier/staff"}].filter(Boolean) as {label:string;href:string}[];
 }
 export async function customerNavigation(organisationId?:string){
- const staff=organisationId?await hasPermission({permission:"organisation.view",organisationId}):false;
- return [{label:"Overview",href:"/dashboard"},{label:"Orders",href:"/dashboard/orders"},{label:"Quotations",href:"/dashboard/quotes"},staff&&{label:"Organisation staff",href:"/dashboard/organisation/staff"}].filter(Boolean) as {label:string;href:string}[];
+ const[organisation,requests]=organisationId?await Promise.all([hasPermission({permission:"organisation.view",organisationId}),hasPermission({permission:"purchase_requests.create",organisationId})]):[false,false];
+ return [{label:"Overview",href:"/dashboard"},{label:"Orders",href:"/dashboard/orders"},{label:"Quotations",href:"/dashboard/quotes"},requests&&{label:"Purchase requests",href:"/dashboard/organisation/purchase-requests"},organisation&&{label:"Organisation staff",href:"/dashboard/organisation/staff"}].filter(Boolean) as {label:string;href:string}[];
 }

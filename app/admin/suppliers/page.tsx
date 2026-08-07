@@ -51,6 +51,8 @@ export default async function SuppliersPage({
   const rows = (data ?? []) as unknown as Row[],
     total = Number(rows[0]?.total_rows ?? 0),
     pages = Math.max(1, Math.ceil(total / 25));
+  const supplierIds=rows.map(row=>row.id);
+  const[{data:branchRows},{data:warehouseRows}]=supplierIds.length?await Promise.all([s.from("supplier_branches").select("id,name,organisation_id").in("organisation_id",supplierIds),s.from("supplier_warehouses").select("id,name,organisation_id").in("organisation_id",supplierIds)]):[{data:[]},{data:[]}];
   return (
     <DashboardShell title="Platform administration" nav={[...ADMIN_NAV]}>
       <div className="flex flex-wrap justify-between gap-3">
@@ -194,6 +196,8 @@ export default async function SuppliersPage({
                       targetLabel={r.business_name}
                       portalLabel="Supplier"
                       action={startSupplierPreview.bind(null, r.id)}
+                      branches={(branchRows??[]).filter(branch=>branch.organisation_id===r.id)}
+                      warehouses={(warehouseRows??[]).filter(warehouse=>warehouse.organisation_id===r.id)}
                     />
                   ) : (
                     <Link className="font-semibold text-brand-700" href={`/admin/suppliers/${r.id}`}>Open</Link>

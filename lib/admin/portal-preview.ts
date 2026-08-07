@@ -21,6 +21,7 @@ export async function requirePortalPreview(
   portalType: "customer" | "supplier",
   targetId: string,
   route: string,
+  targetKind: "user"|"organisation" = portalType === "supplier" ? "organisation" : "user",
 ) {
   const { user } = await requireRole(["admin", "super_admin"]);
   const sessionId = (await cookies()).get("admin_portal_preview")?.value;
@@ -32,7 +33,7 @@ export async function requirePortalPreview(
     .eq("id", sessionId)
     .eq("admin_user_id", user.id)
     .eq("portal_type", portalType)
-    .eq(portalType === "customer" ? "target_user_id" : "target_organisation_id", targetId)
+    .eq(targetKind === "user" ? "target_user_id" : "target_organisation_id", targetId)
     .eq("status", "active")
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();

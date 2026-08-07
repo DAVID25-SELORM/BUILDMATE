@@ -2,16 +2,11 @@ import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { SupplierOverview } from "@/components/dashboard/SupplierOverview";
 import { StatusBanner } from "@/components/supplier/StatusBanner";
-import { createClient } from "@/lib/supabase/server";
-import { getSupplierMembership } from "@/lib/supplier/data";
+import { requireSupplierPermission } from "@/lib/organisations/access";
 import { getSupplierDashboardDecision } from "@/lib/supplier/routing";
 
 export default async function SupplierDashboardPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const membership = await getSupplierMembership(supabase, user.id);
-  if (!membership) redirect("/supplier/onboarding");
+  const{supabase,membership}=await requireSupplierPermission("supplier.profile.view");
   const { organisation } = membership;
   const decision = getSupplierDashboardDecision(organisation.verification_status);
   if (decision.action === "redirect_onboarding") redirect("/supplier/onboarding");

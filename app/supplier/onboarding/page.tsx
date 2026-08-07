@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getSupplierMembership, getSupplierOnboardingBundle } from "@/lib/supplier/data";
+import { getSupplierOnboardingBundle } from "@/lib/supplier/data";
+import {requireSupplierPermission} from "@/lib/organisations/access";
 import { getNextIncompleteStep } from "@/lib/supplier/progress";
 import { getOnboardingRouteDecision } from "@/lib/supplier/routing";
 import { SupplierOnboardingWizard } from "@/components/supplier/onboarding/SupplierOnboardingWizard";
@@ -8,20 +8,7 @@ import { StatusBanner } from "@/components/supplier/StatusBanner";
 import type { OnboardingStep } from "@/lib/supplier/constants";
 
 export default async function SupplierOnboardingPage() {
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const membership = await getSupplierMembership(supabase, user.id);
-  if (!membership) {
-    return (
-      <div className="mx-auto max-w-2xl p-6">
-        <StatusBanner status="draft" showAction={false} reason="No supplier organisation is linked to this account yet. Contact support for help." />
-      </div>
-    );
-  }
+  const{supabase,membership}=await requireSupplierPermission("supplier.profile.view");
 
   const { organisation } = membership;
   const decision = getOnboardingRouteDecision(organisation.verification_status);

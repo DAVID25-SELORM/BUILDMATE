@@ -19,7 +19,7 @@ export async function hasPermission(check: PermissionCheck): Promise<boolean> {
 
 export async function requirePermission(check: PermissionCheck) {
   const { user, profile } = await requireUser();
-  const allowed = await hasPermission(check);
+  const {data:allowed}=await (await createClient()).rpc("check_permission_audited",{target_permission:check.permission,target_organisation:check.organisationId??null});
   if (!allowed) {
     redirect(getRedirectForRole(profile?.role));
   }

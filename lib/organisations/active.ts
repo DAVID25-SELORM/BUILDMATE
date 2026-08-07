@@ -1,0 +1,10 @@
+import {cookies} from "next/headers";
+import type {SupabaseClient} from "@supabase/supabase-js";
+import type {OrganisationScope} from "@/lib/permissions/organisation";
+const COOKIE_NAMES={supplier:"buildmate_supplier_org",customer:"buildmate_customer_org"} as const;
+export type OrganisationChoice={id:string;name:string;organisationType:string;memberRole:string};
+export function chooseActiveOrganisation(choices:OrganisationChoice[],requested:string|null){return choices.find(choice=>choice.id===requested)??choices[0]??null;}
+export async function requestedOrganisationId(scope:OrganisationScope){return (await cookies()).get(COOKIE_NAMES[scope])?.value??null;}
+export async function listOrganisationChoices(supabase:SupabaseClient,userId:string,scope:OrganisationScope):Promise<OrganisationChoice[]>{const query=supabase.from("organisation_members").select("organisation_id,member_role,created_at,organisations!inner(id,name,organisation_type)").eq("user_id",userId).eq("status","active").eq("is_active",true);if(scope==="supplier")query.eq("organisations.organisation_type","supplier");else query.neq("organisations.organisation_type","supplier");const{data}=await query.order("created_at",{ascending:true});return(data??[]).map(row=>{const organisation=row.organisations as unknown as{id:string;name:string;organisation_type:string};return{id:row.organisation_id,name:organisation.name,organisationType:organisation.organisation_type,memberRole:row.member_role};});}
+export async function resolveActiveOrganisation(supabase:SupabaseClient,userId:string,scope:OrganisationScope){const choices=await listOrganisationChoices(supabase,userId,scope);const requested=await requestedOrganisationId(scope);return{active:chooseActiveOrganisation(choices,requested),choices};}
+export async function setActiveOrganisationCookie(scope:OrganisationScope,organisationId:string){(await cookies()).set(COOKIE_NAMES[scope],organisationId,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",path:"/",maxAge:60*60*24*30,priority:"high"});}

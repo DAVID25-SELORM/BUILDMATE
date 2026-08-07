@@ -17,15 +17,15 @@ export interface SupplierMembership {
   organisation: SupplierOrganisation;
 }
 
-export async function getSupplierMembership(supabase: SupabaseClient, userId: string): Promise<SupplierMembership | null> {
-  const { data: membership } = await supabase
+export async function getSupplierMembership(supabase: SupabaseClient, userId: string, preferredOrganisationId?:string|null): Promise<SupplierMembership | null> {
+  let query = supabase
     .from("organisation_members")
     .select("id, organisation_id, member_role, status")
     .eq("user_id", userId)
     .eq("is_active", true)
-    .eq("status", "active")
-    .limit(1)
-    .maybeSingle();
+    .eq("status", "active");
+  if(preferredOrganisationId)query=query.eq("organisation_id",preferredOrganisationId);
+  const {data:membership}=await query.order("created_at",{ascending:true}).limit(1).maybeSingle();
 
   if (!membership) return null;
 

@@ -1,0 +1,5 @@
+"use client";
+import {usePathname} from "next/navigation";
+import {switchActiveOrganisation} from "@/app/organisation-actions";
+import type {OrganisationScope} from "@/lib/permissions/organisation";
+export function OrganisationSwitcher({scope,currentId,choices}:{scope:OrganisationScope;currentId:string;choices:{id:string;name:string}[]}){const pathname=usePathname();if(choices.length<2)return <span className="text-xs font-semibold text-slate-600">{choices[0]?.name}</span>;return <form action={switchActiveOrganisation.bind(null,scope)}><input type="hidden" name="returnTo" value={pathname}/><label className="sr-only" htmlFor={`${scope}-organisation`}>Active organisation</label><select id={`${scope}-organisation`} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold" name="organisationId" defaultValue={currentId} onChange={event=>event.currentTarget.form?.requestSubmit()}>{choices.map(choice=><option key={choice.id} value={choice.id}>{choice.name}</option>)}</select></form>}
