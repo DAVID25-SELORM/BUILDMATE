@@ -1,0 +1,3 @@
+"use server";import{createClient}from"@/lib/supabase/server";
+export type ContactState={ok?:boolean;message:string};
+export async function submitContact(_:ContactState,formData:FormData):Promise<ContactState>{const values={target_name:String(formData.get("name")??""),target_phone:String(formData.get("phone")??""),target_email:String(formData.get("email")??""),target_topic:String(formData.get("topic")??""),target_message:String(formData.get("message")??""),target_website:String(formData.get("website")??"")};const{error}=await(await createClient()).rpc("submit_contact_inquiry",values);return error?{message:error.message}:{ok:true,message:"Thanks. Your enquiry has been received and our team will respond by email."}}
