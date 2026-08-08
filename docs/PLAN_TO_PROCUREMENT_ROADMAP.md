@@ -12,13 +12,14 @@ BuildMate must describe only capabilities that are actually operating. A rules-b
 
 The upload queue is the secure foundation for a human quantity-surveyor review workflow. Automated plan interpretation is not yet implemented.
 
-## Version 2 — structured extraction
+## Version 2 — structured extraction (spreadsheet workflow implemented)
 
-- Extract structured BOQ rows from supported spreadsheets and text PDFs.
-- Require user confirmation for ambiguous units, quantities and duplicated lines.
-- Match confirmed rows to catalogue products and supplier listings.
-- Preserve source page/cell provenance and confidence for every extracted row.
-- Generate editable procurement packages and comparison-ready RFQs.
+- CSV and XLSX BOQs are extracted into structured rows (implemented).
+- Customers must review, edit, confirm or exclude every extracted requirement (implemented).
+- Deterministic catalogue suggestions discard low-confidence matches (implemented).
+- Worksheet and row provenance plus match confidence are retained in each RFQ item (implemented).
+- Confirmed rows generate an idempotent, comparison-ready RFQ (implemented).
+- Text-PDF extraction remains pending evaluation; PDFs, drawings and images continue through assisted review.
 
 ## Version 3 — plan intelligence
 

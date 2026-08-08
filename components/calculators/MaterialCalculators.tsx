@@ -35,8 +35,8 @@ export function MaterialCalculators() {
   }
   const materialList = estimate ? `${estimate.label}: ${estimate.quantity} ${estimate.unit} (preliminary calculator estimate)` : "";
   return <>
-    <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{tools.map(tool => <article className="card overflow-hidden" key={tool.kind}>
-      <div className="relative aspect-[16/8]"><Image src={images[tool.kind]} alt={`${tool.name} material`} fill sizes="(min-width:1024px) 33vw, (min-width:768px) 50vw, 100vw" className="object-cover" /></div>
+    <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{tools.map((tool,index) => <article className="card overflow-hidden" key={tool.kind}>
+      <div className="relative aspect-[16/8]"><Image src={images[tool.kind]} alt={`${tool.name} material`} fill loading={index===0?"eager":"lazy"} sizes="(min-width:1024px) 33vw, (min-width:768px) 50vw, 100vw" className="object-cover" /></div>
       <div className="p-6"><h2 className="text-xl font-bold">{tool.name}</h2><p className="mt-2 text-sm leading-6 text-slate-600">Enter measured dimensions, openings and a waste allowance for a preliminary estimate.</p><button className="btn-secondary mt-5 w-full" type="button" onClick={() => open(tool)}>Open calculator</button></div>
     </article>)}</div>
     {selected && <section id="calculator-form" className="card mt-8 scroll-mt-8 p-6">

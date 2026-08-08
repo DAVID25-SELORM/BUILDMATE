@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { resolveActiveOrganisation } from "@/lib/organisations/active";
 import { createClient } from "@/lib/supabase/server";
+import { matchCatalogue, parseCsv, parseXlsx } from "@/lib/procurement/boq";
 
 export type UploadState = { ok?: boolean; message: string };
 const allowed = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp", "text/csv", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
@@ -17,6 +18,7 @@ export async function uploadProcurementSource(_: UploadState, formData: FormData
   if (!(file instanceof File) || file.size === 0) return { message: "Choose a BOQ, PDF plan, spreadsheet or plan image." };
   if (file.size > 15 * 1024 * 1024) return { message: "The maximum file size is 15 MB." };
   if (!allowed.has(file.type)) return { message: "Use PDF, CSV, XLSX, JPG, PNG or WebP." };
+  if ((file.type === "text/csv" || file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") && file.size > 5 * 1024 * 1024) return { message: "Structured BOQ spreadsheets must be 5 MB or smaller." };
   const title = String(formData.get("title") ?? "").trim();
   const projectType = String(formData.get("projectType") ?? "");
   const stage = String(formData.get("stage") ?? "");
@@ -37,7 +39,21 @@ export async function uploadProcurementSource(_: UploadState, formData: FormData
   if (rowError) return { message: rowError.message };
   const { error: uploadError } = await supabase.storage.from("project-private-media").upload(storagePath, file, { contentType: file.type, upsert: false });
   if (uploadError) { await supabase.from("project_procurement_uploads").delete().eq("id", id); return { message: uploadError.message }; }
+  let extracted = 0;
+  if (file.type === "text/csv" || file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+    try {
+      const rows = file.type === "text/csv" ? parseCsv(await file.text()) : await parseXlsx(await file.arrayBuffer());
+      const { data: products } = await supabase.from("products").select("id,name").eq("is_active", true).limit(1000);
+      const records = rows.map(row => { const match = matchCatalogue(row.description, products ?? []); return { upload_id: id, source_sheet: row.sourceSheet, source_row: row.sourceRow, description: row.description, quantity: row.quantity, unit: row.unit, matched_product_id: match?.productId ?? null, match_confidence: match?.confidence ?? null }; });
+      const { error: extractionError } = await supabase.from("procurement_upload_items").insert(records);
+      if (extractionError) throw extractionError;
+      extracted = records.length;
+    } catch (cause) {
+      await supabase.from("project_procurement_uploads").update({ status: "failed" }).eq("id", id);
+      return { message: `File secured, but structured extraction needs attention: ${cause instanceof Error ? cause.message : "unsupported spreadsheet structure"}` };
+    }
+  }
   await supabase.from("project_procurement_uploads").update({ status: "review_pending" }).eq("id", id);
   revalidatePath("/dashboard/plan-to-procurement");
-  return { ok: true, message: "Upload secured. BuildMate will use it for assisted procurement review; no automated quantities are presented as professional certification." };
+  return { ok: true, message: extracted ? `${extracted} BOQ rows extracted for your review. Confirm every quantity before creating an RFQ.` : "Upload secured for assisted review; no automated quantities are presented as professional certification." };
 }
