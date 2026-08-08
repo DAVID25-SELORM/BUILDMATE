@@ -1,0 +1,1 @@
+alter table public.project_procurement_uploads add column external_processing_consent_at timestamptz,add column extraction_method text check(extraction_method in('spreadsheet','vision')),add column extraction_model text,add column extraction_warning text check(extraction_warning is null or char_length(extraction_warning)<=500);

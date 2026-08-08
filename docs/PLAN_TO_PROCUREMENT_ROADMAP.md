@@ -23,6 +23,8 @@ The upload queue is the secure foundation for a human quantity-surveyor review w
 
 ## Version 3 — plan intelligence
 
+- Consent-gated PDF/image schedule extraction integration is implemented, but requires `OPENAI_API_KEY` and a validated `OPENAI_VISION_MODEL` in the deployment environment.
+- The current vision prompt accepts only explicitly printed material rows with positive quantities and units; it is prohibited from calculating geometry or inferring scale.
 - Use a separately evaluated vision pipeline for plans and drawings.
 - Detect scale, dimensions, symbols and construction elements with confidence thresholds.
 - Route low-confidence output to qualified human review.
