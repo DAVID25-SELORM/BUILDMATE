@@ -1,0 +1,34 @@
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)values
+('product-media','product-media',true,5242880,array['image/jpeg','image/png','image/webp']),
+('supplier-public-media','supplier-public-media',true,5242880,array['image/jpeg','image/png','image/webp']),
+('project-private-media','project-private-media',false,15728640,array['application/pdf','image/jpeg','image/png','image/webp','text/csv','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']),
+('dispute-evidence','dispute-evidence',false,10485760,array['image/jpeg','image/png','image/webp','application/pdf'])
+on conflict(id)do update set public=excluded.public,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
+
+create table public.project_procurement_uploads(id uuid primary key default gen_random_uuid(),owner_id uuid not null references public.profiles(id),organisation_id uuid references public.organisations(id),project_id uuid references public.projects(id),title text not null,project_type text not null check(project_type in('residential','commercial','renovation','other')),current_stage text not null check(current_stage in('foundation','blockwork','roofing','plumbing','electrical','finishing','painting')),source_type text not null check(source_type in('boq','plan','image')),storage_path text not null,original_filename text not null,mime_type text not null,file_size bigint not null,status text not null default'uploaded'check(status in('uploaded','review_pending','ready','failed')),created_at timestamptz not null default now());
+alter table public.project_procurement_uploads enable row level security;
+create policy "owners and tenant staff read procurement uploads"on public.project_procurement_uploads for select to authenticated using(owner_id=auth.uid()or(organisation_id is not null and has_permission('organisation.view',organisation_id))or is_platform_admin());
+create policy "customers create procurement uploads"on public.project_procurement_uploads for insert to authenticated with check(owner_id=auth.uid()and(organisation_id is null or has_permission('purchase_requests.create',organisation_id)));
+create policy "owners delete unprocessed uploads"on public.project_procurement_uploads for delete to authenticated using(owner_id=auth.uid()and status in('uploaded','failed'));
+
+create table public.product_media(id uuid primary key default gen_random_uuid(),listing_id uuid not null references public.supplier_listings(id)on delete cascade,storage_path text not null unique,alt_text text not null check(char_length(alt_text)between 5 and 240),sort_order smallint not null default 0 check(sort_order between 0 and 7),is_cover boolean not null default false,created_at timestamptz not null default now(),unique(listing_id,sort_order));
+create unique index product_media_one_cover on public.product_media(listing_id)where is_cover;
+alter table public.product_media enable row level security;
+create policy "public product media read"on public.product_media for select using(true);
+create policy "supplier product media manage"on public.product_media for all to authenticated using(exists(select 1 from supplier_listings l where l.id=listing_id and has_permission('products.edit',l.supplier_id)))with check(exists(select 1 from supplier_listings l where l.id=listing_id and has_permission('products.edit',l.supplier_id)));
+create or replace function public.limit_product_media()returns trigger language plpgsql security definer set search_path=public as $$begin if(select count(*)from product_media where listing_id=new.listing_id)>=8 then raise exception'Each listing supports a maximum of 8 images';end if;return new;end;$$;
+create trigger enforce_product_media_limit before insert on public.product_media for each row execute function public.limit_product_media();
+
+create policy "public media read"on storage.objects for select using(bucket_id in('product-media','supplier-public-media'));
+create policy "supplier product media insert"on storage.objects for insert to authenticated with check(bucket_id='product-media'and has_permission('products.edit',((storage.foldername(name))[1])::uuid));
+create policy "supplier product media update"on storage.objects for update to authenticated using(bucket_id='product-media'and has_permission('products.edit',((storage.foldername(name))[1])::uuid));
+create policy "supplier product media delete"on storage.objects for delete to authenticated using(bucket_id='product-media'and has_permission('products.edit',((storage.foldername(name))[1])::uuid));
+create policy "supplier public media insert"on storage.objects for insert to authenticated with check(bucket_id='supplier-public-media'and has_permission('supplier.profile.edit',((storage.foldername(name))[1])::uuid));
+create policy "supplier public media update"on storage.objects for update to authenticated using(bucket_id='supplier-public-media'and has_permission('supplier.profile.edit',((storage.foldername(name))[1])::uuid));
+create policy "supplier public media delete"on storage.objects for delete to authenticated using(bucket_id='supplier-public-media'and has_permission('supplier.profile.edit',((storage.foldername(name))[1])::uuid));
+create policy "project media insert"on storage.objects for insert to authenticated with check(bucket_id='project-private-media'and((storage.foldername(name))[1])::uuid=auth.uid()and exists(select 1 from project_procurement_uploads u where u.id=((storage.foldername(name))[2])::uuid and u.owner_id=auth.uid()));
+create policy "project media authorised read"on storage.objects for select to authenticated using(bucket_id='project-private-media'and exists(select 1 from project_procurement_uploads u where u.id=((storage.foldername(name))[2])::uuid and(u.owner_id=auth.uid()or(u.organisation_id is not null and has_permission('organisation.view',u.organisation_id))or is_platform_admin())));
+create policy "project media owner delete"on storage.objects for delete to authenticated using(bucket_id='project-private-media'and((storage.foldername(name))[1])::uuid=auth.uid());
+create policy "dispute evidence insert"on storage.objects for insert to authenticated with check(bucket_id='dispute-evidence'and exists(select 1 from order_disputes d where d.id=((storage.foldername(name))[1])::uuid and(d.customer_id=auth.uid()or is_platform_admin())));
+create policy "dispute evidence authorised read"on storage.objects for select to authenticated using(bucket_id='dispute-evidence'and exists(select 1 from order_disputes d where d.id=((storage.foldername(name))[1])::uuid and(d.customer_id=auth.uid()or is_platform_admin())));
+create policy "dispute evidence delete"on storage.objects for delete to authenticated using(bucket_id='dispute-evidence'and exists(select 1 from order_disputes d where d.id=((storage.foldername(name))[1])::uuid and(d.customer_id=auth.uid()or is_platform_admin())));

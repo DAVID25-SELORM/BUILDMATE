@@ -6,5 +6,5 @@ export async function supplierNavigation(organisationId:string){
 }
 export async function customerNavigation(organisationId?:string){
  const[organisation,requests]=organisationId?await Promise.all([hasPermission({permission:"organisation.view",organisationId}),hasPermission({permission:"purchase_requests.create",organisationId})]):[false,false];
- return [{label:"Overview",href:"/dashboard"},{label:"Orders",href:"/dashboard/orders"},{label:"Quotations",href:"/dashboard/quotes"},requests&&{label:"Purchase requests",href:"/dashboard/organisation/purchase-requests"},organisation&&{label:"Organisation staff",href:"/dashboard/organisation/staff"},organisation&&{label:"Organisation settings",href:"/dashboard/organisation/settings"}].filter(Boolean) as {label:string;href:string}[];
+ return [{label:"Overview",href:"/dashboard"},{label:"Plan to procurement",href:"/dashboard/plan-to-procurement"},{label:"Orders",href:"/dashboard/orders"},{label:"Quotations",href:"/dashboard/quotes"},requests&&{label:"Purchase requests",href:"/dashboard/organisation/purchase-requests"},organisation&&{label:"Organisation staff",href:"/dashboard/organisation/staff"},organisation&&{label:"Organisation settings",href:"/dashboard/organisation/settings"}].filter(Boolean) as {label:string;href:string}[];
 }
