@@ -16,4 +16,10 @@ All photographs below are self-hosted WebP derivatives downloaded from Pexels. P
 | `construction/architects-reviewing-plans.webp` | [Maren Ferraro](https://www.pexels.com/photo/architects-reviewing-construction-blueprints-outdoors-29299826/) | Plan-to-Procurement marketing |
 | `construction/example-architectural-plan.webp` | [Jonathan Borba](https://www.pexels.com/photo/close-up-of-an-architectural-plan-13083354/) | Clearly labelled example plan imagery |
 
+## Supplier-provided visit media
+
+| Local asset | Source / rights basis | Use |
+|---|---|---|
+| `suppliers/nana-attakorah/*.jpg` | Photographs supplied directly to the BuildMate project team following its August 2026 field visit to Nana Attakorah II Ventures; publication authority must be retained in the supplier onboarding record | Nana Attakorah II Ventures public storefront and inventory illustrations. These images represent that supplier only and must not be reused for other suppliers or as generic catalogue photography. |
+
 Supplier-uploaded product and storefront media must retain the supplier’s rights declaration and descriptive alt text in the database. Private verification, project, delivery, and dispute media must only be served through authorised signed URLs.

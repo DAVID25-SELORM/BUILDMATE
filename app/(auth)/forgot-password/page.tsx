@@ -2,8 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { forgotPasswordSchema } from "@/lib/auth/validation";
+import { sendPasswordReset } from "./actions";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -23,14 +23,11 @@ export default function ForgotPasswordPage() {
     }
 
     setLoading(true);
-    const supabase = createClient();
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(result.data.email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`
-    });
+    const resetResult = await sendPasswordReset(result.data.email);
     setLoading(false);
 
-    if (resetError) {
-      setError(resetError.message);
+    if (!resetResult.ok) {
+      setError(resetResult.error);
       return;
     }
     setSent(true);

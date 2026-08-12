@@ -3,6 +3,7 @@ import { HardHat, Menu, ShoppingCart } from "lucide-react";
 
 const links = [
   ["Shop Materials", "/shop"],
+  ["Featured Supplier", "/suppliers/nana-attakorah"],
   ["Request Quote", "/request-quote"],
   ["Calculators", "/calculators"],
   ["About", "/about"],
