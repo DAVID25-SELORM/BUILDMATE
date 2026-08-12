@@ -32,5 +32,6 @@ export const ADMIN_NAV = [
   { label: "Audit Logs", href: "/admin/audit-logs" },
   { label: "Security & Operations", href: "/admin/security" },
   { label: "Staff", href: "/admin/staff" },
+  { label: "Online Users", href: "/admin/online-users" },
   { label: "Settings", href: "/admin/settings" },
 ] as const;

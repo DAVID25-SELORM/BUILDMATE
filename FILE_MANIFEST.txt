@@ -13,6 +13,7 @@
 ./app/(public)/page.tsx
 ./app/(public)/request-quote/page.tsx
 ./app/(public)/shop/page.tsx
+./app/admin/online-users/page.tsx
 ./app/api/health/route.ts
 ./app/dashboard/admin/page.tsx
 ./app/dashboard/customer/page.tsx
@@ -24,8 +25,9 @@
 ./components/dashboard/MetricCard.tsx
 ./components/layout/Footer.tsx
 ./components/layout/Header.tsx
+./components/presence/PresenceTracker.tsx
 ./components/ui/Button.tsx
-./lib/sample-data.ts
+./lib/catalogue/featured-products.ts
 ./lib/supabase/client.ts
 ./lib/supabase/server.ts
 ./next-env.d.ts
@@ -34,6 +36,7 @@
 ./postcss.config.mjs
 ./public/.gitkeep
 ./supabase/migrations/202607280001_initial_schema.sql
+./supabase/migrations/202608120052_realtime_user_presence.sql
 ./supabase/seed.sql
 ./tailwind.config.ts
 ./tsconfig.json
