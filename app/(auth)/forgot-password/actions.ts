@@ -1,5 +1,6 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import { forgotPasswordSchema } from "@/lib/auth/validation";
 import { sendNotification } from "@/lib/notifications/sender";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -12,6 +13,13 @@ export async function sendPasswordReset(email: string): Promise<ResetRequestResu
 
   try {
     const admin = createAdminClient();
+    const emailHash = createHash("sha256").update(parsed.data.email.trim().toLowerCase()).digest("hex");
+    const { data: allowed, error: throttleError } = await admin.rpc("claim_password_reset_rate_limit", {
+      target_email_hash: emailHash,
+      minimum_interval_seconds: 60,
+    });
+    // Return the same result for throttled, unknown, and registered addresses.
+    if (throttleError || !allowed) return { ok: true };
     const { data, error } = await admin.auth.admin.generateLink({
       type: "recovery",
       email: parsed.data.email,

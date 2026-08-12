@@ -13,3 +13,7 @@ export function canPublishListing(input: {
 export function listingStatusLabel(status: ListingStatus) {
   return status.replaceAll("_", " ");
 }
+
+export function isSupplierEditableStatus(status: ListingStatus) {
+  return status !== "published" && status !== "suspended";
+}

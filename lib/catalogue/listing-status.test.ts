@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canPublishListing, listingStatusLabel } from "./listing-status";
+import { canPublishListing, isSupplierEditableStatus, listingStatusLabel } from "./listing-status";
 
 describe("supplier listing lifecycle", () => {
   it("requires price, fulfilment and available stock mode before publishing", () => {
@@ -10,4 +10,15 @@ describe("supplier listing lifecycle", () => {
   });
 
   it("formats lifecycle labels", () => expect(listingStatusLabel("out_of_stock")).toBe("out of stock"));
+
+  it.each([
+    ["draft", true],
+    ["out_of_stock", true],
+    ["seasonal", true],
+    ["discontinued", true],
+    ["published", false],
+    ["suspended", false],
+  ] as const)("marks %s editability as %s", (status, expected) => {
+    expect(isSupplierEditableStatus(status)).toBe(expected);
+  });
 });
