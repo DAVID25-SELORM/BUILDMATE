@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { inviteStaff, type StaffActionState } from "@/app/admin/staff/actions";
 import { PLATFORM_ROLE_KEYS, PLATFORM_ROLE_LABELS, PLATFORM_PERMISSION_KEYS, PLATFORM_PERMISSION_LABELS } from "@/lib/permissions/platform";
+import { PLATFORM_ACCESS_REASONS, PLATFORM_DEPARTMENTS } from "@/lib/invitations/platform-options";
 
 export function InviteStaffForm() {
   const [state, action, pending] = useActionState(inviteStaff, null as StaffActionState);
@@ -32,7 +33,10 @@ export function InviteStaffForm() {
       </div>
       <div>
         <label className="label" htmlFor="department">Department</label>
-        <input id="department" name="department" className="input" />
+        <select id="department" name="department" className="input" required defaultValue="">
+          <option value="" disabled>Select department</option>
+          {PLATFORM_DEPARTMENTS.map((department) => <option key={department} value={department}>{department}</option>)}
+        </select>
       </div>
       <div>
         <button type="button" className="text-sm font-semibold text-brand-700" onClick={() => setShowExtra((v) => !v)}>
@@ -51,7 +55,10 @@ export function InviteStaffForm() {
       </div>
       <div>
         <label className="label" htmlFor="reason">Reason for access</label>
-        <textarea id="reason" name="reason" className="input min-h-24" minLength={5} required />
+        <select id="reason" name="reason" className="input" required defaultValue="">
+          <option value="" disabled>Select reason for access</option>
+          {PLATFORM_ACCESS_REASONS.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
+        </select>
       </div>
       {state?.error && <p className="text-sm font-medium text-red-600" role="alert">{state.error}</p>}
       <button className="btn-primary w-full" type="submit" disabled={pending}>
