@@ -8,6 +8,7 @@ export function PortalPreviewShell({
   referenceNumber,
   previewRole,
   returnTo,
+  previewBase,
   nav,
   children,
 }: {
@@ -18,10 +19,11 @@ export function PortalPreviewShell({
   referenceNumber: string | null;
   previewRole?: string | null;
   returnTo?:string;
+  previewBase?:string;
   nav: { label: string; section?: string }[];
   children: React.ReactNode;
 }) {
-  const base = `/admin/preview/${portalType}/${targetId}`;
+  const base = previewBase ?? `/admin/preview/${portalType}/${targetId}`;
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="sticky top-0 z-30 border-b border-amber-500 bg-amber-300 px-4 py-3 text-amber-950 shadow-sm">
