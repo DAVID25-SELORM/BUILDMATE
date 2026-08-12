@@ -62,7 +62,8 @@ export async function inviteStaff(_prev: StaffActionState, formData: FormData): 
 
   try {
     await sendInvitationEmail(result.data.email, result.data.fullName, result.data.roleKey, token);
-  } catch {
+  } catch (error) {
+    console.error("Platform staff invitation email delivery failed", error instanceof Error ? { name: error.name, message: error.message } : { message: "Unknown email error" });
     revalidatePath("/admin/staff");
     redirect("/admin/staff?notice=invite_email_failed");
   }

@@ -57,7 +57,7 @@ export default async function StaffPage({
 
       {q.notice === "invite_email_failed" && (
         <div className="mt-5 rounded-xl bg-amber-50 p-4 text-amber-900">
-          The invitation was created, but the email could not be sent. Open the record below and use Resend.
+          The invitation was created, but the email service rejected delivery. Verify the production SMTP credentials, then open the record below and use Resend.
         </div>
       )}
 
