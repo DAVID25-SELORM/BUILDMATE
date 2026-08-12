@@ -10,16 +10,21 @@ import {
   rejectSupplier,
   requestInformation,
   startReview,
-  suspendSupplier
+  suspendSupplier,
 } from "@/app/admin/suppliers/actions";
-import { VERIFICATION_LEVELS, VERIFICATION_LEVEL_LABELS, type VerificationLevel, type VerificationStatus } from "@/lib/supplier/constants";
+import {
+  VERIFICATION_LEVELS,
+  VERIFICATION_LEVEL_LABELS,
+  type VerificationLevel,
+  type VerificationStatus,
+} from "@/lib/supplier/constants";
 
 export function SupplierActionsPanel({
   organisationId,
   status,
   currentVerificationLevels,
   reviewers,
-  currentReviewerId
+  currentReviewerId,
 }: {
   organisationId: string;
   status: VerificationStatus;
@@ -30,15 +35,27 @@ export function SupplierActionsPanel({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [reasonMode, setReasonMode] = useState<"under_review" | "approve" | "reinstate" | "reject" | "information_required" | "suspend" | null>(null);
+  const [reasonMode, setReasonMode] = useState<
+    | "under_review"
+    | "approve"
+    | "reinstate"
+    | "reject"
+    | "information_required"
+    | "suspend"
+    | null
+  >(null);
   const [reason, setReason] = useState("");
-  const [levels, setLevels] = useState<VerificationLevel[]>(currentVerificationLevels);
+  const [levels, setLevels] = useState<VerificationLevel[]>(
+    currentVerificationLevels,
+  );
   const [note, setNote] = useState("");
   const [reviewerId, setReviewerId] = useState(currentReviewerId ?? "");
   const [reviewerReason, setReviewerReason] = useState("");
 
   function toggleLevel(level: VerificationLevel) {
-    setLevels((prev) => (prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level]));
+    setLevels((prev) =>
+      prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level],
+    );
   }
 
   async function run(fn: () => Promise<{ success: boolean; error?: string }>) {
@@ -54,7 +71,9 @@ export function SupplierActionsPanel({
       setReason("");
       router.refresh();
     } catch {
-      setError("The review action could not be completed. Check your permission and try again.");
+      setError(
+        "The review action could not be completed. Check your permission and try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -63,11 +82,22 @@ export function SupplierActionsPanel({
   return (
     <div className="card space-y-6 p-6">
       <h2 className="text-lg font-bold">Review actions</h2>
-      {error && <p className="text-sm font-medium text-red-600" role="alert">{error}</p>}
+      {error && (
+        <p className="text-sm font-medium text-red-600" role="alert">
+          {error}
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-3">
         {status === "submitted" && (
-          <button type="button" className="btn-secondary" disabled={loading} onClick={() => setReasonMode("under_review")}>Start review</button>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={loading}
+            onClick={() => setReasonMode("under_review")}
+          >
+            Start review
+          </button>
         )}
         {(status === "submitted" || status === "under_review") && (
           <>
@@ -81,15 +111,43 @@ export function SupplierActionsPanel({
             >
               Approve
             </button>
-            <button type="button" className="btn-secondary" disabled={loading} onClick={() => setReasonMode("reject")}>Reject</button>
-            <button type="button" className="btn-secondary" disabled={loading} onClick={() => setReasonMode("information_required")}>Request information</button>
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={loading}
+              onClick={() => setReasonMode("reject")}
+            >
+              Reject
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={loading}
+              onClick={() => setReasonMode("information_required")}
+            >
+              Request information
+            </button>
           </>
         )}
         {status === "approved" && (
-          <button type="button" className="btn-secondary" disabled={loading} onClick={() => setReasonMode("suspend")}>Suspend</button>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={loading}
+            onClick={() => setReasonMode("suspend")}
+          >
+            Suspend
+          </button>
         )}
         {status === "suspended" && (
-          <button type="button" className="btn-primary" disabled={loading} onClick={() => setReasonMode("reinstate")}>Reinstate</button>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={loading}
+            onClick={() => setReasonMode("reinstate")}
+          >
+            Reinstate
+          </button>
         )}
       </div>
 
@@ -98,41 +156,74 @@ export function SupplierActionsPanel({
           <p className="label">Verification levels to grant on approval</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {VERIFICATION_LEVELS.map((level) => (
-              <label key={level} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm">
-                <input type="checkbox" checked={levels.includes(level)} onChange={() => toggleLevel(level)} />
+              <label
+                key={level}
+                className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  checked={levels.includes(level)}
+                  onChange={() => toggleLevel(level)}
+                />
                 {VERIFICATION_LEVEL_LABELS[level]}
               </label>
             ))}
           </div>
-          {levels.length === 0 && <p className="mt-2 text-sm font-medium text-amber-800">Select at least one verification level before approving.</p>}
+          {levels.length === 0 && (
+            <p className="mt-2 text-sm font-medium text-amber-800">
+              Select at least one verification level before approving.
+            </p>
+          )}
         </div>
       )}
 
       {reasonMode && (
         <div className="rounded-xl border border-slate-200 p-4">
           <label className="label" htmlFor="reason">
-            {reasonMode === "under_review" ? "Reason for starting review" : reasonMode === "approve" ? "Approval reason" : reasonMode === "reinstate" ? "Reinstatement reason" : reasonMode === "reject" ? "Rejection reason" : reasonMode === "suspend" ? "Suspension reason" : "What information is required?"}
+            {reasonMode === "under_review"
+              ? "Reason for starting review"
+              : reasonMode === "approve"
+                ? "Approval reason"
+                : reasonMode === "reinstate"
+                  ? "Reinstatement reason"
+                  : reasonMode === "reject"
+                    ? "Rejection reason"
+                    : reasonMode === "suspend"
+                      ? "Suspension reason"
+                      : "What information is required?"}
           </label>
-          <textarea id="reason" className="input min-h-24" value={reason} onChange={(e) => setReason(e.target.value)} />
+          <textarea
+            id="reason"
+            className="input min-h-24"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
           <div className="mt-3 flex gap-3">
-            <button type="button" className="btn-secondary" onClick={() => setReasonMode(null)} disabled={loading}>Cancel</button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setReasonMode(null)}
+              disabled={loading}
+            >
+              Cancel
+            </button>
             <button
               type="button"
               className="btn-primary"
               disabled={loading}
               onClick={() =>
-                confirm("Confirm this sensitive supplier status change? The reason will be audited.") && run(() =>
+                run(() =>
                   reasonMode === "under_review"
                     ? startReview(organisationId, reason)
                     : reasonMode === "approve"
-                    ? approveSupplier(organisationId, levels, reason)
-                    : reasonMode === "reinstate"
-                      ? reinstateSupplier(organisationId, reason)
-                  : reasonMode === "reject"
-                    ? rejectSupplier(organisationId, reason)
-                    : reasonMode === "suspend"
-                      ? suspendSupplier(organisationId, reason)
-                      : requestInformation(organisationId, reason)
+                      ? approveSupplier(organisationId, levels, reason)
+                      : reasonMode === "reinstate"
+                        ? reinstateSupplier(organisationId, reason)
+                        : reasonMode === "reject"
+                          ? rejectSupplier(organisationId, reason)
+                          : reasonMode === "suspend"
+                            ? suspendSupplier(organisationId, reason)
+                            : requestInformation(organisationId, reason),
                 )
               }
             >
@@ -143,29 +234,68 @@ export function SupplierActionsPanel({
       )}
 
       <div className="border-t border-slate-200 pt-5">
-        <label className="label" htmlFor="reviewer">Assign reviewer</label>
+        <label className="label" htmlFor="reviewer">
+          Assign reviewer
+        </label>
         <div className="flex gap-2">
-          <select id="reviewer" className="input" value={reviewerId} onChange={(e) => setReviewerId(e.target.value)}>
+          <select
+            id="reviewer"
+            className="input"
+            value={reviewerId}
+            onChange={(e) => setReviewerId(e.target.value)}
+          >
             <option value="">Unassigned</option>
-            {reviewers.map((r) => <option key={r.id} value={r.id}>{r.full_name}</option>)}
+            {reviewers.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.full_name}
+              </option>
+            ))}
           </select>
-          <button type="button" className="btn-secondary shrink-0" disabled={loading || !reviewerId || reviewerReason.trim().length<5} onClick={() => confirm("Assign this reviewer? The reason will be audited.")&&run(() => assignReviewer(organisationId, reviewerId, reviewerReason))}>Assign</button>
+          <button
+            type="button"
+            className="btn-secondary shrink-0"
+            disabled={
+              loading || !reviewerId || reviewerReason.trim().length < 5
+            }
+            onClick={() =>
+              run(() =>
+                assignReviewer(organisationId, reviewerId, reviewerReason),
+              )
+            }
+          >
+            Assign
+          </button>
         </div>
-        <input className="input mt-2" value={reviewerReason} onChange={e=>setReviewerReason(e.target.value)} minLength={5} placeholder="Required assignment reason"/>
+        <input
+          className="input mt-2"
+          value={reviewerReason}
+          onChange={(e) => setReviewerReason(e.target.value)}
+          minLength={5}
+          placeholder="Required assignment reason"
+        />
       </div>
 
       <div className="border-t border-slate-200 pt-5">
-        <label className="label" htmlFor="note">Internal note</label>
-        <textarea id="note" className="input min-h-20" value={note} onChange={(e) => setNote(e.target.value)} />
+        <label className="label" htmlFor="note">
+          Internal note
+        </label>
+        <textarea
+          id="note"
+          className="input min-h-20"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
         <button
           type="button"
           className="btn-secondary mt-3"
           disabled={loading || !note.trim()}
-          onClick={() => run(async () => {
-            const result = await addReviewNote(organisationId, note);
-            if (result.success) setNote("");
-            return result;
-          })}
+          onClick={() =>
+            run(async () => {
+              const result = await addReviewNote(organisationId, note);
+              if (result.success) setNote("");
+              return result;
+            })
+          }
         >
           Add note
         </button>

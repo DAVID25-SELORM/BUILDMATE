@@ -14,9 +14,11 @@ export function PresenceTracker() {
     const supabase = createClient();
     sessionId.current ??= crypto.randomUUID();
     let active = true;
+    let rpcAvailable=true;
     const heartbeat = async () => {
-      if (!active || document.visibilityState === "hidden") return;
-      await supabase.rpc("touch_user_presence", { target_session: sessionId.current, target_path: pathname });
+      if (!active || !rpcAvailable || document.visibilityState === "hidden") return;
+      const {error}=await supabase.rpc("touch_user_presence", { target_session: sessionId.current, target_path: pathname });
+      if(error?.code==="PGRST202"||error?.message.includes("touch_user_presence"))rpcAvailable=false;
     };
     let timer:number|undefined;
     void supabase.auth.getUser().then(({data})=>{

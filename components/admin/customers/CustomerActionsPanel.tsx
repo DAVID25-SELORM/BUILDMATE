@@ -6,6 +6,7 @@ import {
   requestCustomerAccessReset,
   type AdminActionState,
 } from "@/app/admin/customers/actions";
+import { ConfirmSubmitButton } from "@/components/ui/ConfirmActionButton";
 function ActionForm({
   id,
   action,
@@ -20,7 +21,7 @@ function ActionForm({
     null as AdminActionState,
   );
   return (
-    <form action={formAction} onSubmit={(event)=>{if(!confirm(`${label}? This action is audited.`))event.preventDefault()}} className="rounded-xl border p-3">
+    <form action={formAction} className="rounded-xl border p-3">
       <label className="label">Reason for {label.toLowerCase()}</label>
       <textarea
         className="input min-h-20"
@@ -28,9 +29,7 @@ function ActionForm({
         minLength={5}
         required
       />
-      <button className="btn-secondary mt-2" disabled={pending}>
-        {pending ? "Saving…" : label}
-      </button>
+      <ConfirmSubmitButton className="btn-secondary mt-2" disabled={pending} label={label} pendingLabel={pending ? "Saving…" : undefined} message={`${label}? This action is audited.`} />
       {state?.error && (
         <p className="mt-2 text-sm text-red-600">{state.error}</p>
       )}
