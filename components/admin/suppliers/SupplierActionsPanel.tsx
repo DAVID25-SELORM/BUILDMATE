@@ -44,15 +44,20 @@ export function SupplierActionsPanel({
   async function run(fn: () => Promise<{ success: boolean; error?: string }>) {
     setLoading(true);
     setError(null);
-    const result = await fn();
-    setLoading(false);
-    if (!result.success) {
-      setError(result.error ?? "Something went wrong");
-      return;
+    try {
+      const result = await fn();
+      if (!result.success) {
+        setError(result.error ?? "Something went wrong");
+        return;
+      }
+      setReasonMode(null);
+      setReason("");
+      router.refresh();
+    } catch {
+      setError("The review action could not be completed. Check your permission and try again.");
+    } finally {
+      setLoading(false);
     }
-    setReasonMode(null);
-    setReason("");
-    router.refresh();
   }
 
   return (
@@ -69,7 +74,7 @@ export function SupplierActionsPanel({
             <button
               type="button"
               className="btn-primary"
-              disabled={loading}
+              disabled={loading || levels.length === 0}
               onClick={() => {
                 setReasonMode("approve");
               }}
@@ -99,6 +104,7 @@ export function SupplierActionsPanel({
               </label>
             ))}
           </div>
+          {levels.length === 0 && <p className="mt-2 text-sm font-medium text-amber-800">Select at least one verification level before approving.</p>}
         </div>
       )}
 

@@ -24,16 +24,21 @@ const STATUS_MESSAGES: Record<VerificationStatus, string> = {
 export function StatusBanner({
   status,
   reason,
-  showAction = true
+  showAction = true,
+  audience = "supplier"
 }: {
   status: VerificationStatus;
   reason?: string | null;
   showAction?: boolean;
+  audience?: "supplier" | "admin";
 }) {
+  const message = audience === "admin" && status === "submitted"
+    ? "This application is awaiting platform review. Start the review, request more information, or approve it below."
+    : STATUS_MESSAGES[status];
   return (
     <div className={`card p-6 ${STATUS_STYLES[status]}`}>
       <p className="text-xs font-bold uppercase tracking-wide">{VERIFICATION_STATUS_LABELS[status]}</p>
-      <p className="mt-2 font-semibold">{STATUS_MESSAGES[status]}</p>
+      <p className="mt-2 font-semibold">{message}</p>
       {reason && <p className="mt-2 text-sm">Reason: {reason}</p>}
       {showAction && (status === "draft" || status === "information_required") && (
         <Link href="/supplier/onboarding" className="btn-primary mt-4 inline-flex">

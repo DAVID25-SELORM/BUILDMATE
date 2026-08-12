@@ -155,11 +155,14 @@ export default async function AdminSupplierDetailPage({
         </div>
       </div>
 
-      <div className="mt-6 scroll-mt-24" id="verification">
+      <SupplierDetailTabs initialTab={["submitted", "under_review", "information_required"].includes(org.verification_status) ? "verification" : "business"} />
+
+      <div className="mt-6 scroll-mt-24" id="supplier-panel-verification" role="tabpanel" aria-labelledby="supplier-tab-verification" data-supplier-tab="verification">
         <StatusBanner
           status={org.verification_status}
           reason={org.decision_reason ?? org.suspended_reason}
           showAction={false}
+          audience="admin"
         />
         <div className="mt-3 grid gap-2 text-sm sm:grid-cols-4">
           <Stat
@@ -194,8 +197,6 @@ export default async function AdminSupplierDetailPage({
           />
         </div>
       </div>
-      <SupplierDetailTabs />
-
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <section className="card p-6" id="supplier-panel-business" role="tabpanel" data-supplier-tab="business">
@@ -633,7 +634,7 @@ export default async function AdminSupplierDetailPage({
           </section>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6" data-supplier-tab="verification">
           <SupplierActionsPanel
             organisationId={org.id}
             status={org.verification_status}
