@@ -17,6 +17,8 @@ import { SupplierTradingControls } from "@/components/admin/suppliers/SupplierTr
 import { startSupplierPreview } from "../actions";
 import { RecordList } from "@/components/admin/RecordList";
 import { SupplierDetailTabs } from "@/components/admin/suppliers/SupplierDetailTabs";
+import { AdminCataloguePicker } from "@/components/admin/suppliers/AdminCataloguePicker";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function AdminSupplierDetailPage({
   params,
@@ -25,6 +27,7 @@ export default async function AdminSupplierDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const admin = createAdminClient();
 
   const { data: organisation } = await supabase
     .from("organisations")
@@ -60,6 +63,7 @@ export default async function AdminSupplierDetailPage({
     { data: adminActions },
     { count: availableRfqCount },
     { data: owner },
+    { data: catalogueRows },
   ] = await Promise.all([
     getSupplierOnboardingBundle(supabase, id),
     getSupplierReviewEvents(supabase, id),
@@ -128,7 +132,20 @@ export default async function AdminSupplierDetailPage({
       .select("full_name,phone")
       .eq("id", organisation.created_by)
       .maybeSingle(),
+    admin
+      .from("products")
+      .select("id,name,base_unit,brands(name),categories(name)")
+      .eq("is_active", true)
+      .order("name"),
   ]);
+
+  const catalogue = (catalogueRows ?? []).map((product) => ({
+    id: product.id,
+    name: product.name,
+    base_unit: product.base_unit,
+    brand: (Array.isArray(product.brands) ? product.brands[0] : product.brands)?.name ?? null,
+    category: (Array.isArray(product.categories) ? product.categories[0] : product.categories)?.name ?? "Uncategorised",
+  }));
 
   const profile = bundle.profile;
 
@@ -260,6 +277,8 @@ export default async function AdminSupplierDetailPage({
               />
             </div>
           </section>
+
+          <AdminCataloguePicker supplierId={id} products={catalogue} />
 
           <section className="card p-6" id="supplier-panel-commerce" role="tabpanel" data-supplier-tab="commerce">
             <h2 className="text-lg font-bold">Orders and quotations</h2>
