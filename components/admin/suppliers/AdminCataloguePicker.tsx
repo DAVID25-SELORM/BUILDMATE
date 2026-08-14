@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { createSupplierInventoryDrafts } from "@/app/admin/suppliers/[id]/inventory-actions";
+import { createSupplierInventoryDrafts, importObservedSupplierInventory } from "@/app/admin/suppliers/[id]/inventory-actions";
 
 type Product = { id: string; name: string; base_unit: string; category: string; brand: string | null };
 
@@ -34,6 +34,14 @@ export function AdminCataloguePicker({ supplierId, products }: { supplierId: str
       </div>
       {message && <p className="mt-3 text-sm font-semibold" role="status">{message}</p>}
       <button className="btn-primary mt-4 w-full" disabled={pending || !selected.length}>{pending ? "Creating drafts..." : `Create ${selected.length || ""} inventory draft${selected.length === 1 ? "" : "s"}`}</button>
+    </form>
+    <form className="mt-6 border-t border-slate-200 pt-5" action={async (formData) => {
+      setPending(true); const result = await importObservedSupplierInventory(supplierId, formData); setPending(false);
+      setMessage(result.error ?? `${result.count ?? 0} private inventory drafts created.`);
+    }}>
+      <label><span className="label">Import observed items</span><textarea className="input min-h-36" name="inventory" required placeholder="Category | Product | Unit" /></label>
+      <p className="mt-2 text-xs text-slate-500">One item per line. Missing catalogue categories and products are created; supplier listings remain private drafts.</p>
+      <button className="btn-secondary mt-3 w-full" disabled={pending}>{pending ? "Importing..." : "Import site-visit inventory"}</button>
     </form>
   </section>;
 }
