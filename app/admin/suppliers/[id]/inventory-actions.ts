@@ -15,7 +15,9 @@ export async function createSupplierInventoryDrafts(supplierId: string, formData
   if (!productIds.length) return { error: "Choose at least one catalogue product." };
   if (productIds.length > 100) return { error: "Choose no more than 100 products at a time." };
 
-  const admin = createAdminClient();
+  let admin;
+  try { admin = createAdminClient(); }
+  catch { return { error: "Server-side catalogue access is not configured. Add SUPABASE_SERVICE_ROLE_KEY to the deployment environment and retry." }; }
   const [{ data: supplier }, { data: products, error: productError }] = await Promise.all([
     admin.from("organisations").select("id,name,organisation_type").eq("id", supplierId).maybeSingle(),
     admin.from("products").select("id").in("id", productIds).eq("is_active", true),
@@ -71,7 +73,9 @@ export async function importObservedSupplierInventory(supplierId: string, formDa
   if (!rows.length) return { error: "Enter inventory as Category | Product | Unit, one item per line." };
   if (rows.length > 100) return { error: "Import no more than 100 items at a time." };
 
-  const admin = createAdminClient();
+  let admin;
+  try { admin = createAdminClient(); }
+  catch { return { error: "Server-side catalogue access is not configured. Add SUPABASE_SERVICE_ROLE_KEY to the deployment environment and retry." }; }
   const { data: supplier } = await admin.from("organisations").select("id,organisation_type").eq("id", supplierId).maybeSingle();
   if (!supplier || supplier.organisation_type !== "supplier") return { error: "Supplier not found." };
   const slugify = (value: string) => value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 100);
