@@ -18,7 +18,6 @@ import { startSupplierPreview } from "../actions";
 import { RecordList } from "@/components/admin/RecordList";
 import { SupplierDetailTabs } from "@/components/admin/suppliers/SupplierDetailTabs";
 import { AdminCataloguePicker } from "@/components/admin/suppliers/AdminCataloguePicker";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function AdminSupplierDetailPage({
   params,
@@ -27,7 +26,6 @@ export default async function AdminSupplierDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const admin = createAdminClient();
 
   const { data: organisation } = await supabase
     .from("organisations")
@@ -132,7 +130,7 @@ export default async function AdminSupplierDetailPage({
       .select("full_name,phone")
       .eq("id", organisation.created_by)
       .maybeSingle(),
-    admin
+    supabase
       .from("products")
       .select("id,name,base_unit,brands(name),categories(name)")
       .eq("is_active", true)
