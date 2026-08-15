@@ -24,13 +24,13 @@ update public.supplier_listings set inventory_mode=case
 -- Preserve one default listing per product/variant at each branch/warehouse.
 drop index if exists public.supplier_listings_unique_parent_default_sku;
 drop index if exists public.supplier_listings_unique_variant_default_sku;
-create unique index supplier_listings_unique_parent_location_default_sku
+create unique index if not exists supplier_listings_unique_parent_location_default_sku
   on public.supplier_listings(
     supplier_id, product_id,
     coalesce(branch_id, '00000000-0000-0000-0000-000000000000'::uuid),
     coalesce(warehouse_id, '00000000-0000-0000-0000-000000000000'::uuid)
   ) where sku is null and product_variant_id is null;
-create unique index supplier_listings_unique_variant_location_default_sku
+create unique index if not exists supplier_listings_unique_variant_location_default_sku
   on public.supplier_listings(
     supplier_id, product_id, product_variant_id,
     coalesce(branch_id, '00000000-0000-0000-0000-000000000000'::uuid),
@@ -54,7 +54,7 @@ where r.scope='supplier' and (
   or (r.key='inventory_officer' and p.key='inventory.manage_cost')
 ) on conflict do nothing;
 
-create table public.inventory_balances(
+create table if not exists public.inventory_balances(
   id uuid primary key default gen_random_uuid(),
   organisation_id uuid not null references public.organisations(id) on delete cascade,
   supplier_listing_id uuid not null references public.supplier_listings(id) on delete cascade,
@@ -78,11 +78,11 @@ create table public.inventory_balances(
   updated_at timestamptz not null default now(),
   check(quantity_reserved<=on_hand_quantity)
 );
-create unique index inventory_balance_branch_unique on public.inventory_balances(supplier_listing_id,branch_id) where warehouse_id is null;
-create unique index inventory_balance_warehouse_unique on public.inventory_balances(supplier_listing_id,branch_id,warehouse_id) where warehouse_id is not null;
-create index inventory_balances_org_location on public.inventory_balances(organisation_id,branch_id,warehouse_id);
+create unique index if not exists inventory_balance_branch_unique on public.inventory_balances(supplier_listing_id,branch_id) where warehouse_id is null;
+create unique index if not exists inventory_balance_warehouse_unique on public.inventory_balances(supplier_listing_id,branch_id,warehouse_id) where warehouse_id is not null;
+create index if not exists inventory_balances_org_location on public.inventory_balances(organisation_id,branch_id,warehouse_id);
 
-create table public.inventory_movements(
+create table if not exists public.inventory_movements(
   id uuid primary key default gen_random_uuid(),
   organisation_id uuid not null references public.organisations(id) on delete restrict,
   supplier_listing_id uuid not null references public.supplier_listings(id) on delete restrict,
@@ -103,17 +103,17 @@ create table public.inventory_movements(
   created_by uuid references public.profiles(id),
   created_at timestamptz not null default now()
 );
-create unique index inventory_movement_idempotency on public.inventory_movements(supplier_listing_id,movement_type,reference_type,reference_id) where reference_id is not null;
-create index inventory_movements_listing_date on public.inventory_movements(supplier_listing_id,created_at desc);
+create unique index if not exists inventory_movement_idempotency on public.inventory_movements(supplier_listing_id,movement_type,reference_type,reference_id) where reference_id is not null;
+create index if not exists inventory_movements_listing_date on public.inventory_movements(supplier_listing_id,created_at desc);
 
-create table public.inventory_receipts(
+create table if not exists public.inventory_receipts(
   id uuid primary key default gen_random_uuid(), organisation_id uuid not null references public.organisations(id),
   supplier_listing_id uuid not null references public.supplier_listings(id), branch_id uuid not null references public.supplier_branches(id),
   warehouse_id uuid references public.supplier_warehouses(id), quantity numeric not null check(quantity>0), unit_cost numeric(14,4) not null check(unit_cost>=0),
   vendor_name text, invoice_reference text, received_date date not null, notes text, received_by uuid not null references public.profiles(id), created_at timestamptz not null default now()
 );
 
-create table public.inventory_returns(
+create table if not exists public.inventory_returns(
   id uuid primary key default gen_random_uuid(), order_item_id uuid not null references public.order_items(id),
   organisation_id uuid not null references public.organisations(id), supplier_listing_id uuid not null references public.supplier_listings(id),
   quantity numeric not null check(quantity>0), disposition text not null check(disposition in('returned_to_stock','damaged','quarantine','supplier_return','disposal')),
