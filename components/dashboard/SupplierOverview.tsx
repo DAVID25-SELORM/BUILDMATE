@@ -11,10 +11,12 @@ export function SupplierOverview({
   orders,
   activeListings,
   quoteStatuses,
+  financials,
 }: {
   orders: SupplierOrder[];
   activeListings: number;
   quoteStatuses: string[];
+  financials?: Record<string,number|null>;
 }) {
   const completed = orders.filter(order => order.status === "completed");
   const revenue = completed.reduce((sum, order) => sum + Number(order.total), 0);
@@ -30,6 +32,12 @@ export function SupplierOverview({
         Live trading and fulfilment information.
       </p>
       <div className="mt-6 grid gap-4 md:grid-cols-4">
+        <MetricCard label="Sales this month" value={`GHS ${Number(financials?.sales??0).toFixed(2)}`} detail="Completed sales only" />
+        <MetricCard label="COGS this month" value={financials?.cogs==null?"Restricted":`GHS ${Number(financials.cogs).toFixed(2)}`} detail="Frozen weighted-average basis" />
+        <MetricCard label="Realised gross margin" value={financials?.realised_gross_margin==null?"Restricted":`GHS ${Number(financials.realised_gross_margin).toFixed(2)}`} detail="Sales less COGS" />
+        <MetricCard label="Inventory cost value" value={financials?.cost_value==null?"Restricted":`GHS ${Number(financials.cost_value).toFixed(2)}`} detail="Current available stock" />
+        <MetricCard label="Potential retail value" value={`GHS ${Number(financials?.retail_value??0).toFixed(2)}`} detail="Not realised profit" />
+        <MetricCard label="Low / out of stock" value={`${financials?.low_stock??0} / ${financials?.out_of_stock??0}`} detail="Inventory attention" />
         <MetricCard
           label="Completed revenue"
           value={`GHS ${revenue.toFixed(2)}`}

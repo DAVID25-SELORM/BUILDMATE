@@ -33,10 +33,13 @@ export default async function SupplierDashboardPage() {
     );
   }
 
-  const [{ data: orders }, { count: listings }, { data: quotes }] = await Promise.all([
+  const monthStart=new Date();monthStart.setUTCDate(1);monthStart.setUTCHours(0,0,0,0);
+  const [{ data: orders }, { count: listings }, { data: quotes }, {data:financials},{data:inventory}] = await Promise.all([
     supabase.from("orders").select("id,order_number,status,total,created_at").eq("supplier_id", organisation.id).order("created_at", { ascending: false }),
     supabase.from("supplier_listings").select("id", { count: "exact", head: true }).eq("supplier_id", organisation.id).eq("is_active", true),
     supabase.from("supplier_quotes").select("status").eq("supplier_id", organisation.id),
+    supabase.rpc("inventory_report",{target_organisation:organisation.id,target_report:"sales_by_product",target_from:monthStart.toISOString().slice(0,10),target_to:new Date().toISOString().slice(0,10)}),
+    supabase.rpc("inventory_dashboard",{target_organisation:organisation.id}),
   ]);
 
   return (
@@ -54,6 +57,7 @@ export default async function SupplierDashboardPage() {
         orders={orders ?? []}
         activeListings={listings ?? 0}
         quoteStatuses={(quotes ?? []).map(quote => quote.status)}
+        financials={{...((financials as {summary?:Record<string,number|null>}|null)?.summary??{}),...((inventory as {summary?:Record<string,number|null>}|null)?.summary??{})}}
       />
     </DashboardShell>
   );

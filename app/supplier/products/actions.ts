@@ -23,8 +23,10 @@ export async function saveListing(formData: FormData) {
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid listing" };
   let priceMetadata = {};
+  let currentInventoryMode: string | null = null;
   if (parsed.data.id) {
-    const { data: current } = await supabase.from("supplier_listings").select("price").eq("id", parsed.data.id).eq("supplier_id", membership.organisationId).maybeSingle();
+    const { data: current } = await supabase.from("supplier_listings").select("price,inventory_mode").eq("id", parsed.data.id).eq("supplier_id", membership.organisationId).maybeSingle();
+    currentInventoryMode = current?.inventory_mode ?? null;
     if (current && (current.price == null ? null : Number(current.price)) !== parsed.data.price) priceMetadata = { currency: "GHS", price_effective_date: new Date().toISOString().slice(0,10), price_source: "supplier portal", price_source_reference: null, price_updated_by: user.id };
   } else if (parsed.data.price !== null) {
     priceMetadata = { currency: "GHS", price_effective_date: new Date().toISOString().slice(0,10), price_source: "supplier portal", price_source_reference: null, price_updated_by: user.id };
@@ -32,7 +34,7 @@ export async function saveListing(formData: FormData) {
   const payload = {
     supplier_id: membership.organisationId, product_id: parsed.data.productId, sku: parsed.data.sku || null,
     price: parsed.data.price, wholesale_price: parsed.data.wholesalePrice, wholesale_minimum: parsed.data.wholesaleMinimum,
-    stock_quantity: parsed.data.stockQuantity, stock_status: parsed.data.stockStatus, lead_time_days: parsed.data.leadTimeDays,
+    ...(currentInventoryMode === "exact_quantity" ? {} : { stock_status: parsed.data.stockStatus }), lead_time_days: parsed.data.leadTimeDays,
     minimum_order_quantity: parsed.data.minimumOrderQuantity,
     delivery_available: parsed.data.deliveryAvailable, pickup_available: parsed.data.pickupAvailable,
     supplier_notes: parsed.data.supplierNotes || null, branch_id: parsed.data.branchId, warehouse_id: parsed.data.warehouseId, listing_status: parsed.data.listingStatus,
@@ -83,14 +85,41 @@ export async function quickUpdateListing(listingId: string, formData: FormData) 
   if (price !== null && (!Number.isFinite(price) || price < 0)) return { error: "Enter a valid price" };
   if (stockQuantity !== null && (!Number.isFinite(stockQuantity) || stockQuantity < 0)) return { error: "Enter a valid stock quantity" };
   if (!['in_stock','low_stock','out_of_stock','confirmation_required','available_on_order'].includes(stockStatus)) return { error: "Choose a valid stock status" };
-  const { data: current } = await supabase.from("supplier_listings").select("price").eq("id",listingId).eq("supplier_id",membership.organisationId).maybeSingle();
+  const { data: current } = await supabase.from("supplier_listings").select("price,inventory_mode").eq("id",listingId).eq("supplier_id",membership.organisationId).maybeSingle();
   if (!current) return { error: "Listing not found" };
   const priceChanged = (current.price == null ? null : Number(current.price)) !== price;
   const priceMetadata = priceChanged ? { currency: "GHS", price_effective_date: new Date().toISOString().slice(0,10), price_source: "supplier portal", price_source_reference: null, price_updated_by: user.id } : {};
-  const { error } = await supabase.from("supplier_listings").update({ price, stock_quantity: stockQuantity, stock_status: stockStatus, availability_confirmed_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...priceMetadata }).eq("id", listingId).eq("supplier_id", membership.organisationId);
+  const inventoryUpdate = current.inventory_mode === "exact_quantity" ? {} : { stock_status: stockStatus };
+  const { error } = await supabase.from("supplier_listings").update({ price, ...inventoryUpdate, availability_confirmed_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...priceMetadata }).eq("id", listingId).eq("supplier_id", membership.organisationId);
   if (error) return { error: error.message };
   revalidatePath("/supplier/products"); revalidatePath("/shop");
   return { success: true };
+}
+
+export async function submitPriceClarification(_: { error?: string; message?: string }, formData: FormData) {
+  const { supabase } = await requireSupplierPermission("products.edit");
+  const clarificationId = String(formData.get("clarificationId") ?? "");
+  const action = String(formData.get("supplierAction") ?? "");
+  const productId = String(formData.get("productId") ?? "") || null;
+  const variantId = String(formData.get("variantId") ?? "") || null;
+  const rawPrice = String(formData.get("confirmedPrice") ?? "").trim();
+  const price = rawPrice === "" ? null : Number(rawPrice);
+  if (!/^[0-9a-f-]{36}$/i.test(clarificationId) || (price !== null && (!Number.isFinite(price) || price < 0))) return { error: "Enter valid clarification details" };
+  const { error } = await supabase.rpc("submit_supplier_price_clarification", {
+    target_clarification: clarificationId,
+    target_action: action,
+    target_name: String(formData.get("confirmedName") ?? ""),
+    target_specification: String(formData.get("confirmedSpecification") ?? ""),
+    target_unit: String(formData.get("confirmedUnit") ?? ""),
+    target_price: price,
+    target_product: productId,
+    target_variant: variantId,
+    target_note: String(formData.get("supplierNote") ?? "")
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/supplier/products");
+  revalidatePath("/admin/catalogue");
+  return { message: "Clarification submitted for catalogue review" };
 }
 
 export async function bulkUpdateListings(formData: FormData) {
@@ -113,8 +142,9 @@ export async function bulkUpdateListings(formData: FormData) {
     if (!data) return { error: "Choose a warehouse belonging to this supplier" };
     if (branchId && data.branch_id && data.branch_id !== branchId) return { error: "The warehouse does not belong to the selected branch" };
   }
-  const { data: owned } = await supabase.from("supplier_listings").select("id,price,delivery_available,pickup_available").eq("supplier_id",membership.organisationId).in("id",listingIds);
+  const { data: owned } = await supabase.from("supplier_listings").select("id,price,delivery_available,pickup_available,inventory_mode").eq("supplier_id",membership.organisationId).in("id",listingIds);
   if ((owned ?? []).length !== listingIds.length) return { error: "One or more listings are unavailable" };
+  if ((owned ?? []).some((item) => item.inventory_mode === "exact_quantity")) return { error: "Exact-quantity listings must be updated from Inventory so every stock change is recorded" };
   const deliveryAvailable = formData.get("deliveryAvailable") === "on";
   const pickupAvailable = formData.get("pickupAvailable") === "on";
   if (listingStatus === "published") {

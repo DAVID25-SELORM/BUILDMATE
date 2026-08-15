@@ -13,6 +13,7 @@ type ListingInitial = {
   wholesaleMinimum?: number | string | null;
   stockQuantity?: number | string | null;
   stockStatus?: string;
+  inventoryMode?: string;
   leadTimeDays?: number;
   minimumOrderQuantity?: number | string | null;
   deliveryAvailable?: boolean;
@@ -42,8 +43,7 @@ export function ListingForm({ products, initial, branches = [], warehouses = [] 
     <label><span className="label">Retail price (GHS)</span><input className="input" name="price" type="number" min="0" step="0.01" defaultValue={initial?.price ?? ""} /></label>
     <label><span className="label">Wholesale price</span><input className="input" name="wholesalePrice" type="number" min="0" step="0.01" defaultValue={initial?.wholesalePrice ?? ""} /></label>
     <label><span className="label">Wholesale minimum</span><input className="input" name="wholesaleMinimum" type="number" min="0" step="0.01" defaultValue={initial?.wholesaleMinimum ?? ""} /></label>
-    <label><span className="label">Stock quantity <span className="font-normal text-slate-500">(optional)</span></span><input className="input" name="stockQuantity" type="number" min="0" step="0.01" defaultValue={initial?.stockQuantity ?? ""} /></label>
-    <label><span className="label">Stock status</span><select className="input" name="stockStatus" defaultValue={initial?.stockStatus ?? "confirmation_required"}><option value="in_stock">In stock</option><option value="low_stock">Low stock</option><option value="out_of_stock">Out of stock</option><option value="confirmation_required">Confirm availability</option><option value="available_on_order">Available on order</option></select></label>
+    {initial?.inventoryMode==="exact_quantity"?<div className="rounded-xl bg-brand-50 p-4 text-sm text-brand-900 md:col-span-2">Exact stock is movement-controlled. Use <b>Inventory</b> to receive, adjust, return or transfer stock.</div>:<label><span className="label">Stock status</span><select className="input" name="stockStatus" defaultValue={initial?.stockStatus ?? "confirmation_required"}><option value="in_stock">In stock</option><option value="low_stock">Low stock</option><option value="out_of_stock">Out of stock</option><option value="confirmation_required">Confirm availability</option><option value="available_on_order">Available on order</option></select></label>}
     <label><span className="label">Minimum order</span><input className="input" name="minimumOrderQuantity" type="number" min="0.01" step="0.01" defaultValue={initial?.minimumOrderQuantity ?? ""} /></label>
     <label><span className="label">Lead time (days)</span><input className="input" name="leadTimeDays" type="number" min="0" defaultValue={initial?.leadTimeDays ?? 1} required /></label>
     <label><span className="label">Branch</span><select className="input" name="branchId" defaultValue={initial?.branchId ?? ""}><option value="">No branch assignment</option>{branches.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>

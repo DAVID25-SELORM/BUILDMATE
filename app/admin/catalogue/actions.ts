@@ -48,3 +48,5 @@ export async function setProductActive(productId: string, isActive: boolean) {
   revalidatePath("/admin/catalogue");
   revalidatePath("/shop");
 }
+
+export async function reviewPriceClarification(clarificationId:string,decision:"approve"|"reject",formData:FormData){await requireRole(["admin","super_admin"]);const supabase=await createClient();const{error}=await supabase.rpc("review_supplier_price_clarification",{target_clarification:clarificationId,target_decision:decision,target_note:String(formData.get("reviewNote")??"")});if(error)throw new Error(error.message);revalidatePath("/admin/catalogue");revalidatePath("/supplier/products");}
