@@ -1,0 +1,2 @@
+import{describe,expect,it}from"vitest";import{inventoryValuation,weightedAverageCost}from"./calculations";
+describe("inventory valuation",()=>{it("uses weighted average cost for receipts",()=>{expect(weightedAverageCost(100,80,100,100)).toBe(90)});it("values remaining available inventory without calling it realised profit",()=>{expect(inventoryValuation(50,90,125)).toEqual({costValue:4500,retailValue:6250,potentialGrossMargin:1750})});it("rejects invalid receipt inputs",()=>{expect(()=>weightedAverageCost(10,5,0,8)).toThrow("Invalid inventory valuation input")})});
