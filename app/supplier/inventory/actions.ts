@@ -34,3 +34,10 @@ export async function configureInventory(_:InventoryActionState,formData:FormDat
   const{error}=await supabase.rpc("inventory_configure_listing",{target_listing:listing,target_mode:String(formData.get("inventoryMode")??"confirmation_required"),target_show_exact:formData.get("showExact")==="on",target_reorder:numberOrNull("reorderPoint"),target_preferred_reorder:numberOrNull("preferredReorder")});
   if(error)return{error:error.message};revalidatePath("/supplier/inventory");revalidatePath("/supplier/products");return{message:"Inventory configuration updated"};
 }
+
+export async function processReturn(_:InventoryActionState,formData:FormData):Promise<InventoryActionState>{
+  const{supabase}=await requireSupplierPermission("inventory.adjust");const item=uuid(formData.get("orderItemId")),requestKey=uuid(formData.get("requestKey")),quantity=positive(formData.get("quantity")),disposition=String(formData.get("disposition")??""),reason=String(formData.get("reason")??"").trim();
+  if(!item||!requestKey||!quantity||reason.length<5)return{error:"Choose an item, quantity, disposition and detailed reason"};
+  const{error}=await supabase.rpc("inventory_record_return",{target_order_item:item,target_quantity:quantity,target_disposition:disposition,target_reason:reason,target_notes:String(formData.get("notes")??""),target_request_key:requestKey});
+  if(error)return{error:error.message};revalidatePath("/supplier/inventory");revalidatePath("/supplier/products");return{message:"Return disposition recorded"};
+}
