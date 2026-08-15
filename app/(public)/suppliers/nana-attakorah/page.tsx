@@ -9,12 +9,14 @@ export const metadata: Metadata = {
 };
 
 const products = [
-  { name: "Sawn hardwood", category: "Timber", unit: "piece", image: "sawn-timber.jpg", note: "Multiple lengths and profiles" },
-  { name: "Construction wood poles", category: "Timber", unit: "piece", image: "wood-poles.jpg", note: "For formwork and site support" },
-  { name: "High-tensile iron rods", category: "Steel", unit: "length", image: "steel-bars.jpg", note: "Bulk quantities available" },
-  { name: "Heavy-duty wheelbarrows", category: "Site tools", unit: "unit", image: "wheelbarrows.jpg", note: "Ready for collection" },
-  { name: "Interior & exterior paint", category: "Finishes", unit: "bucket", image: "paint-stock.jpg", note: "Assorted brands and sizes" },
-  { name: "Metal & plumbing fittings", category: "Hardware", unit: "piece", image: "metal-fittings.jpg", note: "Ask for available sizes" },
+  { name: "Sawn hardwood timber", category: "Timber & wood", unit: "piece", image: "sawn-timber.jpg", note: "Confirm species, lengths and profiles" },
+  { name: "Bamboo construction poles", category: "Timber & wood", unit: "piece", image: "wood-poles.jpg", note: "For formwork and temporary support" },
+  { name: "High-tensile reinforcement bars", category: "Steel & reinforcement", unit: "length", image: "steel-bars.jpg", note: "Confirm diameter, grade and length" },
+  { name: "Roofing sheets & wire mesh", category: "Roofing & steel", unit: "sheet or roll", image: "hardware-stock.jpg", note: "Confirm profile, gauge and dimensions" },
+  { name: "Construction wheelbarrows", category: "Site tools", unit: "unit", image: "wheelbarrows.jpg", note: "Confirm tray type and wheel configuration" },
+  { name: "Shovels, spades & metal pans", category: "Site tools", unit: "unit", image: "metal-fittings.jpg", note: "Ask for the exact tool and size" },
+  { name: "Interior & exterior paint", category: "Paint & finishes", unit: "bucket", image: "paint-stock.jpg", note: "Confirm brand, colour, finish and size" },
+  { name: "PVC & metal building fittings", category: "Hardware & fittings", unit: "piece", image: "shop-front.jpg", note: "Ask for fitting type and available sizes" },
 ];
 
 const gallery = [
@@ -65,7 +67,7 @@ export default function NanaAttakorahStorefront() {
 
     <section className="container-shell py-14 sm:py-16">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div><p className="font-semibold text-brand-700">AVAILABLE FROM THIS SUPPLIER</p><h2 className="mt-2 text-3xl font-black">Popular materials in stock</h2><p className="mt-3 text-slate-600">Prices and quantities are confirmed when the supplier responds to your request.</p></div>
+        <div><p className="font-semibold text-brand-700">FIELD-VISITED PRODUCT RANGE</p><h2 className="mt-2 text-3xl font-black">Materials photographed at the supplier premises</h2><p className="mt-3 text-slate-600">Prices, quantities and exact specifications are confirmed when the supplier responds to your request.</p></div>
         <Link href="/request-quote?title=Nana%20Attakorah%20materials%20request&location=Kwashieman%2C%20Accra" className="btn-secondary">Request multiple items</Link>
       </div>
       <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

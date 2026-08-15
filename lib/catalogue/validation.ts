@@ -17,7 +17,7 @@ export const listingSchema = z.object({
   id: optionalUuid.optional(),
   productId: z.string().uuid("Choose a product"),
   sku: z.string().trim().max(80).default(""),
-  price: z.coerce.number().nonnegative("Price cannot be negative"),
+  price: z.preprocess((value) => value === "" ? null : value, z.coerce.number().nonnegative("Price cannot be negative").nullable()),
   wholesalePrice: z.union([z.coerce.number().nonnegative(), z.literal("")]).transform((value) => value === "" ? null : value),
   wholesaleMinimum: z.union([z.coerce.number().positive(), z.literal("")]).transform((value) => value === "" ? null : value),
   stockQuantity: z.union([z.coerce.number().nonnegative(), z.literal("")]).transform((value) => value === "" ? null : value),
@@ -27,9 +27,14 @@ export const listingSchema = z.object({
   deliveryAvailable: z.boolean().default(false),
   pickupAvailable: z.boolean().default(false),
   supplierNotes: z.string().trim().max(2000).default(""),
+  branchId: optionalUuid.default(""),
+  warehouseId: optionalUuid.default(""),
   listingStatus: z.enum(["draft", "published", "out_of_stock", "seasonal", "discontinued"]).default("draft"),
   isActive: z.boolean().default(false)
 }).superRefine((value, context) => {
+  if (value.listingStatus === "published" && value.price == null) {
+    context.addIssue({ code: "custom", path: ["price"], message: "Add a retail price before publishing" });
+  }
   if (value.listingStatus === "published" && !value.deliveryAvailable && !value.pickupAvailable) {
     context.addIssue({ code: "custom", path: ["deliveryAvailable"], message: "Choose delivery or pickup before publishing" });
   }

@@ -1,0 +1,42 @@
+import { describe, expect, it } from "vitest";
+import { listingCompletion, listingSummary } from "./listing-completion";
+import { listingSchema } from "./validation";
+
+describe("supplier inventory completion", () => {
+  it("allows confirmation-required stock when price and fulfilment are valid", () => {
+    expect(listingCompletion({ price: 125, stockStatus: "confirmation_required", deliveryAvailable: true, pickupAvailable: false, branchId: "eca78e0f-1054-4c22-9d89-c36eba8d687c", listingStatus: "draft" })).toEqual({
+      needsPrice: false,
+      needsStockConfirmation: true,
+      needsAvailability: false,
+      needsBranch: false,
+      readyToPublish: true,
+      published: false,
+    });
+  });
+
+  it("blocks readiness for missing price, unavailable stock, fulfilment, or supplier approval", () => {
+    expect(listingCompletion({ price: null, stockStatus: "in_stock", deliveryAvailable: true, pickupAvailable: true, branchId: "eca78e0f-1054-4c22-9d89-c36eba8d687c", listingStatus: "draft" }).readyToPublish).toBe(false);
+    expect(listingCompletion({ price: 20, stockStatus: "out_of_stock", deliveryAvailable: true, pickupAvailable: true, listingStatus: "draft" }).readyToPublish).toBe(false);
+    expect(listingCompletion({ price: 20, stockStatus: "in_stock", deliveryAvailable: false, pickupAvailable: false, listingStatus: "draft" }).readyToPublish).toBe(false);
+    expect(listingCompletion({ price: 20, stockStatus: "in_stock", deliveryAvailable: true, pickupAvailable: false, listingStatus: "draft" }, false).readyToPublish).toBe(false);
+    expect(listingCompletion({ price: 20, stockStatus: "in_stock", deliveryAvailable: true, pickupAvailable: false, branchId: null, listingStatus: "draft" }).needsBranch).toBe(true);
+  });
+
+  it("builds the supplier dashboard summary", () => {
+    const summary = listingSummary([
+      { price: null, stockStatus: "confirmation_required", deliveryAvailable: true, pickupAvailable: true, listingStatus: "draft" },
+      { price: 50, stockStatus: "in_stock", deliveryAvailable: true, pickupAvailable: false, branchId: "eca78e0f-1054-4c22-9d89-c36eba8d687c", listingStatus: "draft" },
+      { price: 80, stockStatus: "in_stock", deliveryAvailable: true, pickupAvailable: true, branchId: "eca78e0f-1054-4c22-9d89-c36eba8d687c", listingStatus: "published" },
+      { price: 80, stockStatus: "out_of_stock", deliveryAvailable: true, pickupAvailable: true, listingStatus: "out_of_stock" },
+    ]);
+    expect(summary).toEqual({ total: 4, draft: 2, ready: 1, published: 1, outOfStock: 1, priceMissing: 1, stockConfirmation: 1, needsBranch: 2 });
+  });
+
+  it("keeps a blank price nullable for drafts and rejects it for publishing", () => {
+    const base = { productId: "9b232d45-65f6-4f7d-83d5-d0907f98b4ff", sku: "", price: "", wholesalePrice: "", wholesaleMinimum: "", stockQuantity: "", stockStatus: "confirmation_required", leadTimeDays: 1, minimumOrderQuantity: "", deliveryAvailable: true, pickupAvailable: true, supplierNotes: "", branchId: "", warehouseId: "", isActive: false };
+    const draft = listingSchema.safeParse({ ...base, listingStatus: "draft" });
+    expect(draft.success).toBe(true);
+    if (draft.success) expect(draft.data.price).toBeNull();
+    expect(listingSchema.safeParse({ ...base, listingStatus: "published", isActive: true }).success).toBe(false);
+  });
+});
