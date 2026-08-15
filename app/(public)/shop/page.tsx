@@ -17,7 +17,9 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   for (const listing of (rawListings ?? []) as unknown as Listing[]) {
     const coverageRaw = listing.organisations.supplier_delivery_coverage;
     const coverage = Array.isArray(coverageRaw) ? coverageRaw[0] ?? null : coverageRaw;
-    if (listing.price == null || !matchesDeliveryCoverage(location, Number(listing.price), coverage)) continue;
+    // A catalogue card has no order quantity yet, so minimum order value is
+    // enforced at checkout rather than against a single unit price here.
+    if (listing.price == null || !matchesDeliveryCoverage(location, Number.POSITIVE_INFINITY, coverage)) continue;
     const existing = grouped.get(listing.product_id);
     const media = [...(listing.product_media ?? [])].sort((a, b) => Number(b.is_cover) - Number(a.is_cover) || a.sort_order - b.sort_order)[0];
     const mediaUrl = media ? supabase.storage.from("product-media").getPublicUrl(media.storage_path).data.publicUrl : listing.products.images?.[0];
