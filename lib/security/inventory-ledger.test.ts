@@ -1,5 +1,6 @@
 import{readFileSync}from"node:fs";import{join}from"node:path";import{describe,expect,it}from"vitest";
 const sql=readFileSync(join(process.cwd(),"supabase","migrations","202608150056_inventory_ledger_and_automatic_stock.sql"),"utf8").toLowerCase();
+const returnHardening=readFileSync(join(process.cwd(),"supabase","migrations","202608160060_inventory_return_concurrency_and_mode_guard.sql"),"utf8").toLowerCase();
 describe("transactional inventory ledger",()=>{
  it("uses append-only movements and per-location balances",()=>{expect(sql).toContain("create table if not exists public.inventory_movements");expect(sql).toContain("create table if not exists public.inventory_balances");expect(sql).toContain("inventory_balance_warehouse_unique");expect(sql).not.toContain("delete from inventory_movements")});
  it("can be safely rerun after a successful dashboard execution",()=>{expect(sql).toContain("create unique index if not exists supplier_listings_unique_parent_location_default_sku");expect(sql).toContain("create table if not exists public.inventory_receipts");expect(sql).toContain("create table if not exists public.inventory_returns")});
@@ -7,4 +8,6 @@ describe("transactional inventory ledger",()=>{
  it("integrates only authoritative order transitions",()=>{expect(sql).toContain("new.status='confirmed'");expect(sql).toContain("new.status='completed'");expect(sql).toContain("new.status in('cancelled','refunded')")});
  it("protects cost data behind security-definer permission-aware RPCs",()=>{expect(sql).toContain("revoke all on public.inventory_balances,public.inventory_movements");expect(sql).toContain("has_permission('inventory.view_cost'");expect(sql).toContain("has_permission('inventory.view_valuation'")});
  it("supports receipts, adjustments, returns and transfers",()=>{for(const name of["inventory_receive_stock","inventory_adjust_stock","inventory_record_return","inventory_transfer_stock"])expect(sql).toContain(name)});
+ it("serializes return decisions and only moves ledger-managed stock",()=>{expect(returnHardening).toContain("for update of oi");expect(returnHardening).toContain("target_request_key is null");expect(returnHardening).toContain("l.inventory_mode='exact_quantity'")});
+ it("revalidates marketplace eligibility inside security-definer checkout",()=>{expect(returnHardening).toContain("l.listing_status='published'");expect(returnHardening).toContain("o.verification_status='approved'");expect(returnHardening).toContain("requested quantity exceeds currently available stock")});
 });
