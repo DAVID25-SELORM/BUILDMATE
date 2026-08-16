@@ -7,6 +7,7 @@ import {
   configureInventory,
   receiveStock,
   recordStockCount,
+  setStockSetupProgress,
   transferStock,
   type InventoryActionState,
 } from "@/app/supplier/inventory/actions";
@@ -95,6 +96,8 @@ export function InventoryOperationForms({
   branchName,
   branchCount,
   warehouseCount,
+  setupProgress = [],
+  setupLastSavedAt,
 }: {
   listings: InventoryListingOption[];
   canReceive: boolean;
@@ -104,6 +107,8 @@ export function InventoryOperationForms({
   branchName?: string;
   branchCount: number;
   warehouseCount: number;
+  setupProgress?: { listing_id: string; status: string; updated_at: string }[];
+  setupLastSavedAt?: string | null;
 }) {
   const dialogs = useRef<Record<DialogName, HTMLDialogElement | null>>({
     receive: null,
@@ -136,7 +141,15 @@ export function InventoryOperationForms({
   const setupListings = listings.filter(
     (item) => item.inventoryMode === "confirmation_required",
   );
-  const [handledSetupIds, setHandledSetupIds] = useState<string[]>([]);
+  const [handledSetupIds, setHandledSetupIds] = useState<string[]>(
+    setupProgress
+      .filter((progress) =>
+        setupListings.some((listing) => listing.id === progress.listing_id),
+      )
+      .map((item) => item.listing_id),
+  );
+  const [setupProgressState, setSetupProgressState] =
+    useState<InventoryActionState>({});
   const setupItem = setupListings.find(
     (item) => !handledSetupIds.includes(item.id),
   );
@@ -161,6 +174,11 @@ export function InventoryOperationForms({
           configuration,
         );
         if (configurationResult.error) return configurationResult;
+        const progress = new FormData();
+        progress.set("listingId", completedId);
+        progress.set("status", "completed");
+        const progressResult = await setStockSetupProgress(initial, progress);
+        if (progressResult.error) return progressResult;
         setHandledSetupIds((ids) => [...ids, completedId]);
       }
       return result;
@@ -562,6 +580,11 @@ export function InventoryOperationForms({
             <p className="text-sm font-bold text-brand-700">
               {setupPosition} of {setupListings.length} products
             </p>
+            {setupLastSavedAt && (
+              <p className="mt-1 text-xs text-slate-500">
+                Progress last saved {new Date(setupLastSavedAt).toLocaleString("en-GH")}
+              </p>
+            )}
             <h3 className="mt-2 text-xl font-black">
               {setupItem.product}
               {setupItem.variant ? ` — ${setupItem.variant}` : ""}
@@ -649,14 +672,21 @@ export function InventoryOperationForms({
               <button
                 className="btn-secondary"
                 type="button"
-                onClick={() =>
-                  setHandledSetupIds((ids) => [...ids, setupItem.id])
-                }
+                onClick={async () => {
+                  const progress = new FormData();
+                  progress.set("listingId", setupItem.id);
+                  progress.set("status", "skipped");
+                  const result = await setStockSetupProgress(initial, progress);
+                  setSetupProgressState(result);
+                  if (!result.error)
+                    setHandledSetupIds((ids) => [...ids, setupItem.id]);
+                }}
               >
                 Skip
               </button>
             </div>
             <Status state={setupState} />
+            <Status state={setupProgressState} />
           </form>
         )}
       </InventoryDialog>

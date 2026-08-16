@@ -9,8 +9,11 @@ type Listing = { id: string; product_id: string; supplier_id: string; price: num
 export default async function ShopPage({ searchParams }: { searchParams: Promise<{ q?: string; category?: string; location?: string; sort?: string }> }) {
   const { q = "", category = "", location = "", sort = "best" } = await searchParams;
   const supabase = await createClient();
+  const { data: matchingIds } = q.trim()
+    ? await supabase.rpc("public_marketplace_search_listing_ids", { target_query: q.trim() })
+    : { data: null };
   let query = supabase.from("supplier_listings").select("id,product_id,supplier_id,price,lead_time_days,stock_status,product_media(storage_path,alt_text,is_cover,sort_order),products!inner(id,name,base_unit,images,is_active,categories(name,slug)),organisations!inner(name,verification_status,supplier_delivery_coverage(regions_served,cities_served,minimum_order_value))").eq("listing_status", "published").eq("is_active", true).eq("products.is_active", true).eq("organisations.verification_status", "approved").neq("stock_status", "out_of_stock").order("price");
-  if (q) query = query.ilike("products.name", `%${q}%`);
+  if (q.trim()) query = query.in("id", (matchingIds ?? []) as string[]);
   if (category) query = query.eq("products.categories.slug", category);
   const [{ data: rawListings }, { data: categories }] = await Promise.all([query, supabase.from("categories").select("name,slug").eq("is_active", true).order("sort_order")]);
   const grouped = new Map<string, { productId: string; name: string; category: string; unit: string; lowestPrice: number; supplierIds: Set<string>; imageUrl?: string; imageAlt?: string }>();

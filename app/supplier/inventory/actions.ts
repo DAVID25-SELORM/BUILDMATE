@@ -219,6 +219,24 @@ export async function configureInventory(
   return { message: "Inventory configuration updated" };
 }
 
+export async function setStockSetupProgress(
+  _: InventoryActionState,
+  formData: FormData,
+): Promise<InventoryActionState> {
+  const { supabase } = await requireSupplierPermission("inventory.configure");
+  const listing = uuid(formData.get("listingId"));
+  const status = String(formData.get("status") ?? "");
+  if (!listing || !["skipped", "completed"].includes(status))
+    return { error: "Invalid stock setup progress" };
+  const { error } = await supabase.rpc("inventory_set_setup_progress", {
+    target_listing: listing,
+    target_status: status,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/supplier/inventory");
+  return { message: status === "skipped" ? "Product skipped" : "Stock setup saved" };
+}
+
 export async function processReturn(
   _: InventoryActionState,
   formData: FormData,

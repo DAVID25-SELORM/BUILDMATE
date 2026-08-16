@@ -72,6 +72,7 @@ export default async function SupplierInventoryPage({
     { data: adjust },
     { data: transfer },
     { data: configure },
+    { data: setupProgress },
   ] = await Promise.all([
     supabase.rpc("inventory_dashboard", {
       target_organisation: membership.organisationId,
@@ -108,6 +109,9 @@ export default async function SupplierInventoryPage({
         target_organisation: membership.organisationId,
       }),
     ),
+    supabase.rpc("inventory_get_setup_progress", {
+      target_organisation: membership.organisationId,
+    }),
   ]);
   const dashboard = (data ?? {
     can_view_cost: false,
@@ -279,6 +283,15 @@ export default async function SupplierInventoryPage({
         branchName={singleBranch?.name}
         branchCount={branches?.length ?? 0}
         warehouseCount={warehouses?.length ?? 0}
+        setupProgress={
+          ((setupProgress as {
+            items?: { listing_id: string; status: string; updated_at: string }[];
+          } | null)?.items ?? [])
+        }
+        setupLastSavedAt={
+          (setupProgress as { last_saved_at?: string | null } | null)
+            ?.last_saved_at ?? null
+        }
       />
       <div className="mt-5 flex flex-wrap gap-2 text-sm font-semibold">
         <Link
