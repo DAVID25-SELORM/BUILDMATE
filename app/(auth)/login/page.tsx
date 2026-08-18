@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { loginSchema } from "@/lib/auth/validation";
 import { getRedirectForRole } from "@/lib/auth/roles";
 import { getSafeRedirectPath } from "@/lib/auth/redirect";
+import { PasswordField } from "@/components/auth/PasswordField";
 
 function LoginForm() {
   const router = useRouter();
@@ -73,17 +74,16 @@ function LoginForm() {
         </div>
         <div>
           <label className="label" htmlFor="password">Password</label>
-          <input
+          <PasswordField
             id="password"
             className="input"
-            type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
             autoComplete="current-password"
           />
-          <div className="mt-2 text-right">
-            <Link href="/forgot-password" className="text-sm font-semibold text-brand-700">Forgot password?</Link>
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-sm text-slate-600">Need help signing in?</span><Link href="/forgot-password" className="text-sm font-semibold text-brand-700">Forgot password?</Link>
           </div>
         </div>
         {error && <p className="text-sm font-medium text-red-600" role="alert">{error}</p>}

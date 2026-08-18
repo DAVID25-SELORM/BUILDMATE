@@ -4,15 +4,15 @@ import { ArrowRight, Calculator, MapPin } from "lucide-react";
 import { ProductCard } from "@/components/commerce/ProductCard";
 import { getFeaturedProducts } from "@/lib/catalogue/featured-products";
 const categories = [
-  { name: "Cement & Concrete", image: "cement-and-concrete.webp" },
-  { name: "Blocks & Bricks", image: "blocks-and-bricks.webp" },
-  { name: "Steel & Reinforcement", image: "steel-reinforcement.webp" },
-  { name: "Roofing", image: "roofing-installation.webp" },
-  { name: "Plumbing", image: "plumbing-materials.webp" },
-  { name: "Electrical", image: "electrical-materials.webp" },
-  { name: "Tiles & Flooring", image: "tiles-flooring.webp" },
-  { name: "Paint & Finishes", image: "paint-finishes.webp" },
-  { name: "Tools & Equipment", image: "tools-equipment.webp" },
+  { name: "Cement & Concrete", slug: "cement-concrete", image: "cement-and-concrete.webp" },
+  { name: "Blocks & Bricks", slug: "blocks-bricks", image: "blocks-and-bricks.webp" },
+  { name: "Steel & Reinforcement", slug: "steel-reinforcement", image: "steel-reinforcement.webp" },
+  { name: "Roofing", slug: "roofing", image: "roofing-installation.webp" },
+  { name: "Plumbing", slug: "plumbing", image: "plumbing-materials.webp" },
+  { name: "Electrical", slug: "electrical", image: "electrical-materials.webp" },
+  { name: "Tiles & Flooring", slug: "tiles-flooring", image: "tiles-flooring.webp" },
+  { name: "Paint & Finishes", slug: "paint-finishes", image: "paint-finishes.webp" },
+  { name: "Tools & Equipment", slug: "tools-equipment", image: "tools-equipment.webp" },
 ];
 export default async function HomePage() {
   const products = await getFeaturedProducts();
@@ -118,7 +118,7 @@ export default async function HomePage() {
         <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3">
           {categories.map((c) => (
             <Link
-              href={`/shop?q=${encodeURIComponent(c.name.split(" & ")[0])}`}
+              href={`/shop?category=${encodeURIComponent(c.slug)}`}
               key={c.name}
               className="card group overflow-hidden"
             >

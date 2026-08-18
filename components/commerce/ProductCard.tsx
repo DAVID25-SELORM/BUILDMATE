@@ -16,6 +16,7 @@ export type Product = {
   location?: string;
   locations?: string[];
   variants?: string[];
+  variant?: string | null;
   availabilityLabel?: string;
   deliveryAvailable?: boolean;
   pickupAvailable?: boolean;
@@ -106,10 +107,15 @@ export function ProductCard({ product }: { product: Product }) {
             <AddToCartButton
               item={{
                 listingId: product.listingId,
+                productId: product.productId,
+                variant: product.variant ?? product.variants?.[0] ?? null,
                 name: product.name,
                 supplier: product.supplier,
                 unit: product.unit,
                 price: product.price,
+                availabilityLabel: product.availabilityLabel,
+                deliveryAvailable: product.deliveryAvailable,
+                pickupAvailable: product.pickupAvailable,
               }}
             />
           ) : (

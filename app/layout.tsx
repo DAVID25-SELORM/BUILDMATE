@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { PresenceTracker } from "@/components/presence/PresenceTracker";
+import { SupportCentre } from "@/components/support/SupportCentre";
 
 export const metadata: Metadata = {
   title: "BuildMate Ghana",
@@ -8,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" data-scroll-behavior="smooth"><body>{children}<PresenceTracker /></body></html>;
+  return <html lang="en" data-scroll-behavior="smooth"><body>{children}<PresenceTracker /><SupportCentre /></body></html>;
 }

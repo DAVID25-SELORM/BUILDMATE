@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { registerSchema } from "@/lib/auth/validation";
 import { REGISTERABLE_ROLES, ROLE_LABELS, type RegisterableRole } from "@/lib/auth/roles";
+import { PasswordField } from "@/components/auth/PasswordField";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -98,11 +99,11 @@ export default function RegisterPage() {
         )}
         <div>
           <label className="label" htmlFor="password">Create password</label>
-          <input id="password" className="input" type="password" placeholder="Create password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="new-password" />
+          <PasswordField id="password" className="input" placeholder="Create password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="new-password" />
         </div>
         <div>
           <label className="label" htmlFor="confirmPassword">Confirm password</label>
-          <input id="confirmPassword" className="input" type="password" placeholder="Confirm password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required autoComplete="new-password" />
+          <PasswordField id="confirmPassword" className="input" placeholder="Confirm password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required autoComplete="new-password" />
         </div>
         <label className="flex items-start gap-3 text-sm text-slate-600">
           <input className="mt-1" type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} required />

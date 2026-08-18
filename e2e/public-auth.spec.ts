@@ -6,6 +6,14 @@ test("health endpoint reports configured services", async ({ request }) => {
 });
 test("password recovery is reachable from login", async ({ page }) => {
   await page.goto("/login");
+  const password = page.getByLabel("Password", { exact: true });
+  await password.fill("kept-secret");
+  await expect(password).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "Show password" }).click();
+  await expect(password).toHaveAttribute("type", "text");
+  await expect(password).toHaveValue("kept-secret");
+  await page.getByRole("button", { name: "Hide password" }).click();
+  await expect(password).toHaveAttribute("type", "password");
   await Promise.all([
     page.waitForURL("**/forgot-password", { timeout: 15000 }),
     page.getByRole("link", { name: "Forgot password?" }).click(),
@@ -58,6 +66,14 @@ test("shop loads and filters eligible master products by default", async ({
   await expect(
     page.getByText("Confirm availability with supplier"),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Add to cart" }).click();
+  await expect(page.getByRole("button", { name: "Added to cart" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Cart with 1 items" })).toBeVisible();
+  await page.getByRole("link", { name: "View cart" }).click();
+  await expect(page.getByRole("heading", { name: "Your cart" })).toBeVisible();
+  await expect(page.getByText("Plywood — ¾ inch")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Plywood — ¾ inch")).toBeVisible();
   await page.goto("/shop");
 
   const search = page.getByPlaceholder(
@@ -108,6 +124,17 @@ test("homepage supplier search submits its query", async ({ page }) => {
   await page.getByPlaceholder("Enter site location").fill("Accra");
   await page.getByRole("button", { name: "Find materials" }).click();
   await expect(page).toHaveURL(/\/shop\?q=cement&location=Accra/);
+});
+test("homepage categories apply canonical filters and support is always reachable", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: /Blocks & Bricks/ }).click();
+  await expect(page).toHaveURL(/\/shop\?category=blocks-bricks/);
+  await expect(page.getByRole("heading", { name: "Shop building materials" })).toBeVisible();
+  await page.getByRole("button", { name: "Get Support" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "How can we help?" })).toBeVisible();
+  await page.getByRole("button", { name: "Close support centre" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
 });
 test("quotation requests reject a past delivery date", async ({ page }) => {
   await page.goto("/request-quote");

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { resetPasswordSchema } from "@/lib/auth/validation";
+import { PasswordField } from "@/components/auth/PasswordField";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -90,10 +91,9 @@ export default function ResetPasswordPage() {
       <form className="mt-8 space-y-5" onSubmit={handleSubmit} noValidate>
         <div>
           <label className="label" htmlFor="password">New password</label>
-          <input
+          <PasswordField
             id="password"
             className="input"
-            type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
@@ -102,10 +102,9 @@ export default function ResetPasswordPage() {
         </div>
         <div>
           <label className="label" htmlFor="confirmPassword">Confirm new password</label>
-          <input
+          <PasswordField
             id="confirmPassword"
             className="input"
-            type="password"
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             required

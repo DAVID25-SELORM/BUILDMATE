@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Menu, ShoppingCart } from "lucide-react";
+import { Menu } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { CartLink } from "@/components/commerce/CartLink";
 
 const links = [
   ["Shop", "/shop"],
@@ -41,9 +42,7 @@ export function Header() {
           <button className="rounded-xl p-2 lg:hidden" aria-label="Open menu">
             <Menu />
           </button>
-          <Link href="/cart" className="rounded-xl p-2" aria-label="Cart">
-            <ShoppingCart />
-          </Link>
+          <CartLink />
         </div>
       </div>
     </header>

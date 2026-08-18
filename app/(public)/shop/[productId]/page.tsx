@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 
 type Offer = {
   id: string;
+  supplier_id: string;
+  branch_id: string | null;
   price: number | string;
   price_effective_date: string | null;
   price_valid_until: string | null;
@@ -59,7 +61,7 @@ export default async function ProductOffersPage({
     supabase
       .from("supplier_listings")
       .select(
-        "id,price,price_effective_date,price_valid_until,product_variant_id,wholesale_price,wholesale_minimum,stock_quantity,stock_status,inventory_mode,show_exact_stock_to_customers,lead_time_days,minimum_order_quantity,delivery_available,pickup_available,supplier_notes,organisations!supplier_listings_supplier_id_fkey!inner(name,verification_status,account_status),supplier_branches(name,city,region),product_variants(name,is_active),product_media(storage_path,alt_text,is_cover,sort_order)",
+        "id,supplier_id,branch_id,price,price_effective_date,price_valid_until,product_variant_id,wholesale_price,wholesale_minimum,stock_quantity,stock_status,inventory_mode,show_exact_stock_to_customers,lead_time_days,minimum_order_quantity,delivery_available,pickup_available,supplier_notes,organisations!supplier_listings_supplier_id_fkey!inner(name,verification_status,account_status),supplier_branches(name,city,region),product_variants(name,is_active),product_media(storage_path,alt_text,is_cover,sort_order)",
       )
       .eq("product_id", productId)
       .eq("listing_status", "published")
@@ -233,10 +235,18 @@ export default async function ProductOffersPage({
                 <AddToCartButton
                   item={{
                     listingId: offer.id,
+                    productId,
+                    variant: offer.product_variants?.name ?? null,
+                    supplierId: offer.supplier_id,
+                    branchId: offer.branch_id,
                     name: product.name,
                     supplier: offer.organisations.name,
                     unit: product.base_unit,
                     price: Number(offer.price),
+                    inventoryMode: offer.inventory_mode,
+                    availabilityLabel: offer.inventory_mode === "confirmation_required" || offer.stock_status === "confirmation_required" ? "Supplier confirmation required" : undefined,
+                    deliveryAvailable: offer.delivery_available,
+                    pickupAvailable: offer.pickup_available,
                   }}
                 />
               </div>

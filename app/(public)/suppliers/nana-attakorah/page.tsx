@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, CheckCircle2, Clock3, MapPin, PackageCheck, Phone, ShieldCheck, Truck } from "lucide-react";
+import { ProductCard, type Product } from "@/components/commerce/ProductCard";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Nana Attakorah II Ventures | BuildMate Ghana",
@@ -26,7 +28,16 @@ const gallery = [
   ["storefront.jpg", "Nana Attakorah II Ventures storefront"],
 ] as const;
 
-export default function NanaAttakorahStorefront() {
+export default async function NanaAttakorahStorefront() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("supplier_listings").select("id,product_id,price,stock_status,inventory_mode,delivery_available,pickup_available,products!inner(name,base_unit,images,categories(name)),product_variants(name),supplier_branches(name,city),product_media(storage_path,alt_text,is_cover,sort_order)").eq("supplier_id","9b232d45-65f6-4f7d-83d5-d0907f98b4ff").eq("listing_status","published").eq("is_active",true).neq("stock_status","out_of_stock").order("price");
+  const published = (data ?? []).map((row) => {
+    const product = row.products as unknown as {name:string;base_unit:string;images:string[];categories:{name:string}|null};
+    const variant = row.product_variants as unknown as {name:string}|null;
+    const branch = row.supplier_branches as unknown as {name:string;city:string}|null;
+    const media = [...((row.product_media ?? []) as {storage_path:string;alt_text:string;is_cover:boolean;sort_order:number}[])].sort((a,b)=>Number(b.is_cover)-Number(a.is_cover)||a.sort_order-b.sort_order)[0];
+    return {listingId:row.id,productId:row.product_id,name:product.name,category:product.categories?.name??"Materials",price:Number(row.price),unit:product.base_unit,supplier:"Nana Attakorah II Ventures",variant:variant?.name??null,variants:variant?[variant.name]:[],location:branch?[branch.name,branch.city].filter(Boolean).join(", "):undefined,availabilityLabel:row.inventory_mode==="confirmation_required"||row.stock_status==="confirmation_required"?"Confirm availability with supplier":"Available",deliveryAvailable:row.delivery_available,pickupAvailable:row.pickup_available,imageUrl:media?supabase.storage.from("product-media").getPublicUrl(media.storage_path).data.publicUrl:product.images?.[0],imageAlt:media?.alt_text} satisfies Product;
+  });
   return <>
     <section className="relative isolate overflow-hidden bg-slate-950 text-white">
       <Image src="/images/suppliers/nana-attakorah/timber-yard.jpg" alt="Stacked timber at Nana Attakorah II Ventures" fill priority sizes="100vw" className="-z-20 object-cover" />
@@ -66,8 +77,15 @@ export default function NanaAttakorahStorefront() {
     </section>
 
     <section className="container-shell py-14 sm:py-16">
+      <p className="font-semibold text-brand-700">PUBLISHED MARKETPLACE OFFERS</p>
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-3xl font-black">Available products from this supplier</h2><p className="mt-2 text-slate-600">{published.length} priced offer{published.length===1?"":"s"} currently published on BuildMate.</p></div><Link href="/shop" className="btn-secondary">Browse all products</Link></div>
+      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{published.map((product)=><ProductCard key={product.listingId} product={product}/>)}</div>
+      {!published.length&&<div className="card mt-8 p-8 text-center text-slate-600">No priced offers from this supplier are currently published.</div>}
+    </section>
+
+    <section className="border-t border-slate-200 bg-sand-50"><div className="container-shell py-14 sm:py-16">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div><p className="font-semibold text-brand-700">FIELD-VISITED PRODUCT RANGE</p><h2 className="mt-2 text-3xl font-black">Materials photographed at the supplier premises</h2><p className="mt-3 text-slate-600">Prices, quantities and exact specifications are confirmed when the supplier responds to your request.</p></div>
+        <div><p className="font-semibold text-brand-700">AVAILABLE ON ENQUIRY</p><h2 className="mt-2 text-3xl font-black">Additional materials observed at this supplier</h2><p className="mt-3 text-slate-600">These field-visited items are not published priced offers. Prices, quantities and exact specifications require supplier confirmation.</p></div>
         <Link href="/request-quote?title=Nana%20Attakorah%20materials%20request&location=Kwashieman%2C%20Accra" className="btn-secondary">Request multiple items</Link>
       </div>
       <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -76,7 +94,7 @@ export default function NanaAttakorahStorefront() {
           <div className="p-5"><p className="text-xs font-bold uppercase tracking-wider text-brand-700">{product.category}</p><h3 className="mt-2 text-xl font-bold">{product.name}</h3><p className="mt-2 text-sm text-slate-600">{product.note} · sold per {product.unit}</p><Link href={`/request-quote?title=${encodeURIComponent(`Nana Attakorah — ${product.name}`)}&materials=${encodeURIComponent(`${product.name} — quantity: `)}&location=Kwashieman%2C%20Accra`} className="mt-5 inline-flex items-center gap-2 font-bold text-brand-700 hover:text-brand-900">Ask for price <ArrowRight className="h-4 w-4" /></Link></div>
         </article>)}
       </div>
-    </section>
+    </div></section>
 
     <section className="bg-white py-14 sm:py-16">
       <div className="container-shell grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
