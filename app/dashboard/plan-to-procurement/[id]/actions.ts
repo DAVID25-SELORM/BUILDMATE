@@ -1,4 +1,62 @@
 "use server";
-import{revalidatePath}from"next/cache";import{redirect}from"next/navigation";import{requireUser}from"@/lib/auth/session";import{createClient}from"@/lib/supabase/server";
-export async function updateProcurementItem(uploadId:string,itemId:string,formData:FormData){await requireUser();const s=await createClient(),description=String(formData.get("description")??"").trim(),quantity=Number(formData.get("quantity")),unit=String(formData.get("unit")??"").trim(),reviewStatus=String(formData.get("reviewStatus")??"extracted"),productId=String(formData.get("productId")??"")||null;if(description.length<2||description.length>500||!Number.isFinite(quantity)||quantity<=0||!unit||unit.length>80||!["extracted","confirmed","excluded"].includes(reviewStatus))throw new Error("Invalid BOQ row values.");const{error}=await s.from("procurement_upload_items").update({description,quantity,unit,review_status:reviewStatus,matched_product_id:productId,updated_at:new Date().toISOString()}).eq("id",itemId).eq("upload_id",uploadId);if(error)throw new Error(error.message);revalidatePath(`/dashboard/plan-to-procurement/${uploadId}`)}
-export async function createProcurementRfq(uploadId:string,formData:FormData){await requireUser();const s=await createClient(),location=String(formData.get("location")??"").trim(),requiredDate=String(formData.get("requiredDate")??"")||null,{data,error}=await s.rpc("procurement_create_rfq",{target_upload:uploadId,target_location:location,target_required_date:requiredDate});if(error||!data)throw new Error(error?.message??"Unable to create quotation request.");redirect(`/dashboard/quotes/${data}`)}
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth/session";
+import { isTodayOrLater } from "@/lib/dates/future";
+import { createClient } from "@/lib/supabase/server";
+export async function updateProcurementItem(
+  uploadId: string,
+  itemId: string,
+  formData: FormData,
+) {
+  await requireUser();
+  const s = await createClient(),
+    description = String(formData.get("description") ?? "").trim(),
+    quantity = Number(formData.get("quantity")),
+    unit = String(formData.get("unit") ?? "").trim(),
+    reviewStatus = String(formData.get("reviewStatus") ?? "extracted"),
+    productId = String(formData.get("productId") ?? "") || null;
+  if (
+    description.length < 2 ||
+    description.length > 500 ||
+    !Number.isFinite(quantity) ||
+    quantity <= 0 ||
+    !unit ||
+    unit.length > 80 ||
+    !["extracted", "confirmed", "excluded"].includes(reviewStatus)
+  )
+    throw new Error("Invalid BOQ row values.");
+  const { error } = await s
+    .from("procurement_upload_items")
+    .update({
+      description,
+      quantity,
+      unit,
+      review_status: reviewStatus,
+      matched_product_id: productId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", itemId)
+    .eq("upload_id", uploadId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/plan-to-procurement/${uploadId}`);
+}
+export async function createProcurementRfq(
+  uploadId: string,
+  formData: FormData,
+) {
+  await requireUser();
+  const location = String(formData.get("location") ?? "").trim();
+  const requiredDate = String(formData.get("requiredDate") ?? "");
+  if (!isTodayOrLater(requiredDate))
+    throw new Error("Required date cannot be in the past.");
+  const s = await createClient();
+  const { data, error } = await s.rpc("procurement_create_rfq", {
+    target_upload: uploadId,
+    target_location: location,
+    target_required_date: requiredDate,
+  });
+  if (error || !data)
+    throw new Error(error?.message ?? "Unable to create quotation request.");
+  redirect(`/dashboard/quotes/${data}`);
+}

@@ -1,14 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Calculator,
-  FileSpreadsheet,
-  MapPin,
-  ShieldCheck,
-  Truck,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight, Calculator, MapPin } from "lucide-react";
 import { ProductCard } from "@/components/commerce/ProductCard";
 import { getFeaturedProducts } from "@/lib/catalogue/featured-products";
 const categories = [
@@ -45,8 +37,8 @@ export default async function HomePage() {
               Build with confidence, from plan to delivery.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-brand-50">
-              Compare verified suppliers, turn BOQs into accountable
-              procurement, buy materials and coordinate delivery to your site.
+              Find building materials, compare verified supplier offers and
+              arrange delivery to your site.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -65,7 +57,7 @@ export default async function HomePage() {
           </div>
           <div className="card self-center p-6 text-slate-900">
             <h2 className="text-xl font-bold">
-              Find materials near your project
+              What building material are you looking for?
             </h2>
             <form action="/shop" className="mt-5 grid gap-3">
               <input
@@ -81,12 +73,34 @@ export default async function HomePage() {
                   placeholder="Enter site location"
                 />
               </div>
-              <button className="btn-primary">Search suppliers</button>
+              <button className="btn-primary">Find materials</button>
             </form>
           </div>
         </div>
       </section>
-      <section className="container-shell py-16">
+      <section className="container-shell py-12">
+        <p className="font-semibold text-brand-700">AVAILABLE MATERIALS</p>
+        <div className="flex items-end justify-between gap-4">
+          <h2 className="mt-2 text-3xl font-black">Start with a product</h2>
+          <Link href="/shop" className="font-semibold text-brand-700">
+            View all <ArrowRight className="inline h-4 w-4" />
+          </Link>
+        </div>
+        <p className="mt-2 text-slate-600">
+          Choose a material, then compare its supplier offers.
+        </p>
+        <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {products.map((p) => (
+            <ProductCard key={p.name} product={p} />
+          ))}
+        </div>
+        {!products.length && (
+          <div className="card mt-8 p-8 text-center text-slate-500">
+            No building materials are currently available.
+          </div>
+        )}
+      </section>
+      <section id="categories" className="container-shell py-12">
         <div className="flex items-end justify-between">
           <div>
             <p className="font-semibold text-brand-700">SHOP BY CATEGORY</p>
@@ -129,33 +143,34 @@ export default async function HomePage() {
       <section className="bg-white py-16">
         <div className="container-shell">
           <div className="text-center">
-            <p className="font-semibold text-brand-700">WHY BUILDMATE</p>
+            <p className="font-semibold text-brand-700">HOW IT WORKS</p>
             <h2 className="mt-2 text-3xl font-black">
-              More than an online hardware shop
+              From product to delivery
             </h2>
           </div>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {(
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {[
               [
-                [
-                  ShieldCheck,
-                  "Verified suppliers",
-                  "Buy from checked businesses with transparent profiles and performance records.",
-                ],
-                [
-                  FileSpreadsheet,
-                  "Plan-to-procurement",
-                  "Upload a BOQ or plan, organise requirements by stage and prepare supplier comparisons.",
-                ],
-                [
-                  Truck,
-                  "Coordinated delivery",
-                  "Track preparation, dispatch and proof of delivery to your construction site.",
-                ],
-              ] as [LucideIcon, string, string][]
-            ).map(([Icon, title, desc]) => (
+                "Find a material",
+                "Browse products or search by name, category or specification.",
+              ],
+              [
+                "Compare offers",
+                "Review supplier price, location, availability and delivery.",
+              ],
+              [
+                "Order or request a quote",
+                "Choose the buying option that fits your project.",
+              ],
+              [
+                "Track delivery",
+                "Follow your order through fulfilment and delivery.",
+              ],
+            ].map(([title, desc], index) => (
               <div key={title} className="card p-7">
-                <Icon className="h-9 w-9 text-brand-700" />
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-700 font-black text-white">
+                  {index + 1}
+                </span>
                 <h3 className="mt-5 text-xl font-bold">{title}</h3>
                 <p className="mt-3 leading-7 text-slate-600">{desc}</p>
               </div>
@@ -206,22 +221,6 @@ export default async function HomePage() {
             </p>
           </div>
         </div>
-      </section>
-      <section className="container-shell py-16">
-        <p className="font-semibold text-brand-700">POPULAR MATERIALS</p>
-        <h2 className="mt-2 text-3xl font-black">
-          Compare total delivered value
-        </h2>
-        <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {products.map((p) => (
-            <ProductCard key={p.name} product={p} />
-          ))}
-        </div>
-        {!products.length && (
-          <div className="card mt-8 p-8 text-center text-slate-500">
-            No approved supplier listings are published yet. New live listings will appear here automatically.
-          </div>
-        )}
       </section>
       <section className="container-shell pb-16">
         <div className="overflow-hidden rounded-3xl bg-slate-950 p-8 text-white md:p-12">

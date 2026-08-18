@@ -1,4 +1,97 @@
 "use client";
 import { useState } from "react";
 import { createQuoteRequest } from "@/app/(public)/request-quote/actions";
-export function QuoteRequestForm({title="",materials="",location=""}:{title?:string;materials?:string;location?:string}) { const [error,setError]=useState<string|null>(null); const [pending,setPending]=useState(false); return <form className="card mt-8 space-y-5 p-7" action={async(formData)=>{setPending(true);setError(null);const result=await createQuoteRequest(formData);setPending(false);if(result?.error)setError(result.error);}}><div><label className="label" htmlFor="quote-title">Project name</label><input id="quote-title" className="input" name="title" defaultValue={title} placeholder="e.g. East Legon 3-bedroom house" required/></div><div className="grid gap-5 md:grid-cols-2"><div><label className="label" htmlFor="quote-location">Project location</label><input id="quote-location" className="input" name="deliveryLocation" defaultValue={location} required/></div><div><label className="label" htmlFor="quote-date">Required delivery date</label><input id="quote-date" className="input" name="requiredDate" type="date"/></div></div><div><label className="label" htmlFor="quote-materials">Material list</label><textarea id="quote-materials" className="input min-h-40" name="materialList" defaultValue={materials} placeholder="Enter one requirement per line" required/></div><div><label className="label" htmlFor="quote-notes">Additional instructions</label><textarea id="quote-notes" className="input min-h-28" name="notes"/></div>{error&&<p className="text-sm font-medium text-red-600" role="alert">{error}</p>}<button disabled={pending} className="btn-primary w-full">{pending?"Submitting...":"Submit quotation request"}</button></form> }
+import { localDateValue } from "@/lib/dates/future";
+export function QuoteRequestForm({
+  title = "",
+  materials = "",
+  location = "",
+}: {
+  title?: string;
+  materials?: string;
+  location?: string;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const today = localDateValue();
+  return (
+    <form
+      className="card mt-8 space-y-5 p-7"
+      action={async (formData) => {
+        setPending(true);
+        setError(null);
+        const result = await createQuoteRequest(formData);
+        setPending(false);
+        if (result?.error) setError(result.error);
+      }}
+    >
+      <div>
+        <label className="label" htmlFor="quote-title">
+          Project name
+        </label>
+        <input
+          id="quote-title"
+          className="input"
+          name="title"
+          defaultValue={title}
+          placeholder="e.g. East Legon 3-bedroom house"
+          required
+        />
+      </div>
+      <div className="grid gap-5 md:grid-cols-2">
+        <div>
+          <label className="label" htmlFor="quote-location">
+            Project location
+          </label>
+          <input
+            id="quote-location"
+            className="input"
+            name="deliveryLocation"
+            defaultValue={location}
+            required
+          />
+        </div>
+        <div>
+          <label className="label" htmlFor="quote-date">
+            Required delivery date
+          </label>
+          <input
+            id="quote-date"
+            className="input"
+            name="requiredDate"
+            type="date"
+            min={today}
+            required
+          />
+        </div>
+      </div>
+      <div>
+        <label className="label" htmlFor="quote-materials">
+          Material list
+        </label>
+        <textarea
+          id="quote-materials"
+          className="input min-h-40"
+          name="materialList"
+          defaultValue={materials}
+          placeholder="Enter one requirement per line"
+          required
+        />
+      </div>
+      <div>
+        <label className="label" htmlFor="quote-notes">
+          Additional instructions
+        </label>
+        <textarea id="quote-notes" className="input min-h-28" name="notes" />
+      </div>
+      {error && (
+        <p className="text-sm font-medium text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+      <button disabled={pending} className="btn-primary w-full">
+        {pending ? "Submitting..." : "Submit quotation request"}
+      </button>
+    </form>
+  );
+}
