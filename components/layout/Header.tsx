@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Menu } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { CartLink } from "@/components/commerce/CartLink";
+import { MobileMenu } from "@/components/layout/MobileMenu";
 
 const links = [
   ["Shop", "/shop"],
@@ -39,9 +39,7 @@ export function Header() {
           <Link href="/register" className="btn-primary py-2.5 text-sm">
             Get started
           </Link>
-          <button className="rounded-xl p-2 lg:hidden" aria-label="Open menu">
-            <Menu />
-          </button>
+          <MobileMenu />
           <CartLink />
         </div>
       </div>

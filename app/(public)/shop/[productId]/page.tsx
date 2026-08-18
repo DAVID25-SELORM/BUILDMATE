@@ -247,6 +247,8 @@ export default async function ProductOffersPage({
                     availabilityLabel: offer.inventory_mode === "confirmation_required" || offer.stock_status === "confirmation_required" ? "Supplier confirmation required" : undefined,
                     deliveryAvailable: offer.delivery_available,
                     pickupAvailable: offer.pickup_available,
+                    location: offer.supplier_branches ? [offer.supplier_branches.name, offer.supplier_branches.city].filter(Boolean).join(", ") : undefined,
+                    imageUrl,
                   }}
                 />
               </div>

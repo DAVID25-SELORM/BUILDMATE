@@ -116,6 +116,8 @@ export function ProductCard({ product }: { product: Product }) {
                 availabilityLabel: product.availabilityLabel,
                 deliveryAvailable: product.deliveryAvailable,
                 pickupAvailable: product.pickupAvailable,
+                location: locations[0],
+                imageUrl: product.imageUrl,
               }}
             />
           ) : (

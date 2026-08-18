@@ -70,10 +70,15 @@ test("shop loads and filters eligible master products by default", async ({
   await expect(page.getByRole("button", { name: "Added to cart" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Cart with 1 items" })).toBeVisible();
   await page.getByRole("link", { name: "View cart" }).click();
-  await expect(page.getByRole("heading", { name: "Your cart" })).toBeVisible();
-  await expect(page.getByText("Plywood — ¾ inch")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your Cart" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Plywood" })).toBeVisible();
+  await expect(page.getByText("¾ inch", { exact: true })).toBeVisible();
+  await expect(page.getByText("Cash on Delivery", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Pay only when you receive and verify/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Place Order" })).toBeVisible();
   await page.reload();
-  await expect(page.getByText("Plywood — ¾ inch")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Plywood" })).toBeVisible();
+  await expect(page.getByText("¾ inch", { exact: true })).toBeVisible();
   await page.goto("/shop");
 
   const search = page.getByPlaceholder(
@@ -136,6 +141,7 @@ test("homepage categories apply canonical filters and support is always reachabl
   await page.getByRole("button", { name: "Close support centre" }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
 });
+test("mobile navigation opens, closes, and navigates", async ({page},testInfo)=>{test.skip(testInfo.project.name!=="mobile","Mobile navigation only");await page.goto("/");const menu=page.getByRole("button",{name:"Open menu"});await menu.click();const dialog=page.getByRole("dialog",{name:"Mobile navigation"});await expect(dialog).toBeVisible();await page.getByRole("button",{name:"Close menu"}).click();await expect(dialog).not.toBeVisible();await menu.click();await dialog.getByRole("link",{name:"Shop",exact:true}).click();await expect(page).toHaveURL(/\/shop/);await expect(dialog).not.toBeVisible()});
 test("quotation requests reject a past delivery date", async ({ page }) => {
   await page.goto("/request-quote");
   const deliveryDate = page.getByLabel("Required delivery date");
