@@ -1,45 +1,566 @@
 import Link from "next/link";
 import { QuoteResponseForm } from "@/components/supplier/quotes/QuoteResponseForm";
-import { acknowledgeOrder, progressOrder, rejectOrder } from "@/app/supplier/orders/actions";
+import {
+  acknowledgeOrder,
+  progressOrder,
+  rejectOrder,
+} from "@/app/supplier/orders/actions";
 import { setListingActive } from "@/app/supplier/products/actions";
 import { ListingForm } from "@/components/supplier/products/ListingForm";
-import { isSupplierEditableStatus, type ListingStatus } from "@/lib/catalogue/listing-status";
+import {
+  isSupplierEditableStatus,
+  type ListingStatus,
+} from "@/lib/catalogue/listing-status";
+import {
+  customerOrderStatusLabel,
+  customerPaymentLabel,
+  customerPaymentStatus,
+  type CustomerOrder,
+} from "@/lib/orders/customer";
 
-export type CustomerOrderView = { id: string; order_number: string; status: string; total: number | string };
-export type CustomerQuoteView = { id: string; title: string; delivery_location: string; status: string; supplier_quotes?: { count: number }[] };
-export type SupplierOrderView = { id: string; order_number: string; status: string; total: number | string; delivery_address: string; fulfilment_method?:string; payment_method?:string; supplier_received_at?:string|null };
-export type SupplierQuoteRequestView = { id: string; title: string; delivery_location: string; required_date: string | null; notes: string | null; created_at: string; quote_request_items: { description: string; quantity: number; unit: string }[] };
-export type SupplierListingView = { id: string; product_id?: string; sku: string | null; price: number | string | null; wholesale_price?: number | string | null; wholesale_minimum?: number | string | null; stock_quantity: number | null; stock_status: string; lead_time_days: number; minimum_order_quantity?: number | string | null; delivery_available?: boolean; pickup_available?: boolean; supplier_notes?: string | null; listing_status?: string; is_active: boolean; products: { name: string; base_unit: string } | { name: string; base_unit: string }[] | null };
-export type SettlementEntryView = { id: string; amount: number | string; status: string; description: string; created_at: string };
+export type CustomerOrderView = CustomerOrder;
+export type CustomerQuoteView = {
+  id: string;
+  title: string;
+  delivery_location: string;
+  status: string;
+  supplier_quotes?: { count: number }[];
+};
+export type SupplierOrderView = {
+  id: string;
+  order_number: string;
+  status: string;
+  total: number | string;
+  delivery_address: string;
+  fulfilment_method?: string;
+  payment_method?: string;
+  supplier_received_at?: string | null;
+};
+export type SupplierQuoteRequestView = {
+  id: string;
+  title: string;
+  delivery_location: string;
+  required_date: string | null;
+  notes: string | null;
+  created_at: string;
+  quote_request_items: {
+    description: string;
+    quantity: number;
+    unit: string;
+  }[];
+};
+export type SupplierListingView = {
+  id: string;
+  product_id?: string;
+  sku: string | null;
+  price: number | string | null;
+  wholesale_price?: number | string | null;
+  wholesale_minimum?: number | string | null;
+  stock_quantity: number | null;
+  stock_status: string;
+  lead_time_days: number;
+  minimum_order_quantity?: number | string | null;
+  delivery_available?: boolean;
+  pickup_available?: boolean;
+  supplier_notes?: string | null;
+  listing_status?: string;
+  is_active: boolean;
+  products:
+    | { name: string; base_unit: string }
+    | { name: string; base_unit: string }[]
+    | null;
+};
+export type SettlementEntryView = {
+  id: string;
+  amount: number | string;
+  status: string;
+  description: string;
+  created_at: string;
+};
 
-export function CustomerOrdersView({ orders, readOnly = false }: { orders: CustomerOrderView[]; readOnly?: boolean }) {
-  return <><h1 className="text-3xl font-black">Orders</h1><div className="mt-6 space-y-3">{orders.map(order => readOnly ? <article className="card flex justify-between p-5" key={order.id}><div><b>{order.order_number}</b><p className="text-sm capitalize text-slate-600">{order.status.replaceAll("_", " ")}</p></div><b>GHS {Number(order.total).toFixed(2)}</b></article> : <Link className="card flex justify-between p-5" href={`/dashboard/orders/${order.id}`} key={order.id}><div><b>{order.order_number}</b><p className="text-sm capitalize text-slate-600">{order.status.replaceAll("_", " ")}</p></div><b>GHS {Number(order.total).toFixed(2)}</b></Link>)}{!orders.length&&<div className="card p-8 text-center text-slate-500">You have no orders.</div>}</div></>;
+export function CustomerOrdersView({
+  orders,
+  readOnly = false,
+}: {
+  orders: CustomerOrderView[];
+  readOnly?: boolean;
+}) {
+  return (
+    <>
+      <h1 className="text-3xl font-black">Orders</h1>
+      <div className="mt-6 space-y-3">
+        {orders.map((order) => {
+          const body = (
+            <>
+              <div>
+                <b>{order.order_number}</b>
+                <p className="text-sm text-slate-600">
+                  {order.supplier?.name ?? "Supplier"}
+                  {order.created_at
+                    ? ` · ${new Date(order.created_at).toLocaleDateString()}`
+                    : ""}
+                </p>
+                <p className="mt-1 font-semibold">
+                  {customerOrderStatusLabel(order.status)}
+                </p>
+                <p className="text-xs text-brand-700">
+                  {customerPaymentLabel(order)} — {customerPaymentStatus(order)}
+                </p>
+              </div>
+              <div className="text-right">
+                <b>GHS {Number(order.total).toFixed(2)}</b>
+                {!readOnly && (
+                  <p className="mt-2 text-sm font-semibold text-brand-700">
+                    Track order
+                  </p>
+                )}
+              </div>
+            </>
+          );
+          return readOnly ? (
+            <article
+              className="card flex justify-between gap-4 p-5"
+              key={order.id}
+            >
+              {body}
+            </article>
+          ) : (
+            <Link
+              className="card flex justify-between gap-4 p-5 hover:border-brand-300"
+              href={`/dashboard/orders/${order.id}`}
+              key={order.id}
+            >
+              {body}
+            </Link>
+          );
+        })}
+        {!orders.length && (
+          <div className="card p-8 text-center text-slate-500">
+            You have no orders.
+          </div>
+        )}
+      </div>
+    </>
+  );
 }
 
-export function CustomerQuotesView({ requests, readOnly = false }: { requests: CustomerQuoteView[]; readOnly?: boolean }) {
-  return <><div className="flex items-center justify-between"><div><h1 className="text-3xl font-black">Quotation requests</h1><p className="mt-2 text-slate-600">Compare supplier responses in one place.</p></div>{!readOnly&&<Link className="btn-primary" href="/request-quote">New request</Link>}</div><div className="mt-6 space-y-3">{requests.map(request => {const body=<div className="flex justify-between"><div><h2 className="font-bold">{request.title}</h2><p className="text-sm text-slate-600">{request.delivery_location}</p></div><div className="text-right text-sm"><p className="capitalize">{request.status}</p><p className="text-slate-500">{request.supplier_quotes?.[0]?.count??0} responses</p></div></div>;return readOnly?<article className="card block p-5" key={request.id}>{body}</article>:<Link className="card block p-5 hover:border-brand-300" href={`/dashboard/quotes/${request.id}`} key={request.id}>{body}</Link>})}{!requests.length&&<div className="card p-8 text-center text-slate-500">You have no quotation requests.</div>}</div></>;
+export function CustomerQuotesView({
+  requests,
+  readOnly = false,
+}: {
+  requests: CustomerQuoteView[];
+  readOnly?: boolean;
+}) {
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-black">Quotation requests</h1>
+          <p className="mt-2 text-slate-600">
+            Compare supplier responses in one place.
+          </p>
+        </div>
+        {!readOnly && (
+          <Link className="btn-primary" href="/request-quote">
+            New request
+          </Link>
+        )}
+      </div>
+      <div className="mt-6 space-y-3">
+        {requests.map((request) => {
+          const body = (
+            <div className="flex justify-between">
+              <div>
+                <h2 className="font-bold">{request.title}</h2>
+                <p className="text-sm text-slate-600">
+                  {request.delivery_location}
+                </p>
+              </div>
+              <div className="text-right text-sm">
+                <p className="capitalize">{request.status}</p>
+                <p className="text-slate-500">
+                  {request.supplier_quotes?.[0]?.count ?? 0} responses
+                </p>
+              </div>
+            </div>
+          );
+          return readOnly ? (
+            <article className="card block p-5" key={request.id}>
+              {body}
+            </article>
+          ) : (
+            <Link
+              className="card block p-5 hover:border-brand-300"
+              href={`/dashboard/quotes/${request.id}`}
+              key={request.id}
+            >
+              {body}
+            </Link>
+          );
+        })}
+        {!requests.length && (
+          <div className="card p-8 text-center text-slate-500">
+            You have no quotation requests.
+          </div>
+        )}
+      </div>
+    </>
+  );
 }
 
-const nextOrder: Record<string,{status:"confirmed"|"preparing"|"ready_for_dispatch";label:string}>={awaiting_supplier_confirmation:{status:"confirmed",label:"Accept order"},paid:{status:"confirmed",label:"Accept order"},confirmed:{status:"preparing",label:"Start preparing"},preparing:{status:"ready_for_dispatch",label:"Ready for dispatch"}};
-export function SupplierOrdersView({ orders, readOnly = false }: { orders: SupplierOrderView[]; readOnly?: boolean }) {
-  return <><h1 className="text-3xl font-black">Supplier orders</h1><p className="mt-2 text-slate-600">Acknowledge new requests, then accept only what you can fulfil.</p><div className="mt-6 space-y-4">{orders.map(order=>{const action=nextOrder[order.status];return <article className={`card p-5 ${order.status==="awaiting_supplier_confirmation"?"border-2 border-brand-500":""}`} key={order.id}><div className="flex flex-wrap items-start justify-between gap-4"><div><b>{order.order_number}</b><p className="text-sm text-slate-600">{order.fulfilment_method==="pickup"?"Supplier pickup":order.delivery_address}</p><p className="mt-1 font-semibold capitalize">{order.status.replaceAll("_"," ")} · GHS {Number(order.total).toFixed(2)}</p><p className="mt-1 text-xs font-semibold text-brand-700">{order.payment_method==="cash_on_pickup"?"Cash on Pickup":"Cash on Delivery"}</p></div>{!readOnly&&<div className="flex flex-wrap gap-2">{order.status==="awaiting_supplier_confirmation"&&!order.supplier_received_at&&<form action={acknowledgeOrder.bind(null,order.id)}><button className="btn-secondary">Mark received</button></form>}{action&&<form action={progressOrder.bind(null,order.id,action.status)}><button className="btn-primary">{action.label}</button></form>}</div>}</div>{order.status==="awaiting_supplier_confirmation"&&!readOnly&&<details className="mt-4"><summary className="cursor-pointer text-sm font-semibold text-red-700">Cannot fulfil this order?</summary><form action={rejectOrder.bind(null,order.id)} className="mt-3 flex gap-2"><input className="input" name="reason" minLength={5} required placeholder="Reason, e.g. requested quantity unavailable"/><button className="btn-secondary">Reject order</button></form></details>}</article>})}{!orders.length&&<div className="card p-8 text-center text-slate-500">No orders yet.</div>}</div></>;
+const nextOrder: Record<
+  string,
+  { status: "confirmed" | "preparing" | "ready_for_dispatch"; label: string }
+> = {
+  awaiting_supplier_confirmation: {
+    status: "confirmed",
+    label: "Accept order",
+  },
+  paid: { status: "confirmed", label: "Accept order" },
+  confirmed: { status: "preparing", label: "Start preparing" },
+  preparing: { status: "ready_for_dispatch", label: "Ready for dispatch" },
+};
+export function SupplierOrdersView({
+  orders,
+  readOnly = false,
+}: {
+  orders: SupplierOrderView[];
+  readOnly?: boolean;
+}) {
+  return (
+    <>
+      <h1 className="text-3xl font-black">Supplier orders</h1>
+      <p className="mt-2 text-slate-600">
+        Acknowledge new requests, then accept only what you can fulfil.
+      </p>
+      <div className="mt-6 space-y-4">
+        {orders.map((order) => {
+          const action = nextOrder[order.status];
+          return (
+            <article
+              className={`card p-5 ${order.status === "awaiting_supplier_confirmation" ? "border-2 border-brand-500" : ""}`}
+              key={order.id}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <b>{order.order_number}</b>
+                  <p className="text-sm text-slate-600">
+                    {order.fulfilment_method === "pickup"
+                      ? "Supplier pickup"
+                      : order.delivery_address}
+                  </p>
+                  <p className="mt-1 font-semibold capitalize">
+                    {order.status.replaceAll("_", " ")} · GHS{" "}
+                    {Number(order.total).toFixed(2)}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-brand-700">
+                    {order.payment_method === "cash_on_pickup"
+                      ? "Cash on Pickup"
+                      : "Cash on Delivery"}
+                  </p>
+                </div>
+                {!readOnly && (
+                  <div className="flex flex-wrap gap-2">
+                    {order.status === "awaiting_supplier_confirmation" &&
+                      !order.supplier_received_at && (
+                        <form action={acknowledgeOrder.bind(null, order.id)}>
+                          <button className="btn-secondary">
+                            Mark received
+                          </button>
+                        </form>
+                      )}
+                    {action && (
+                      <form
+                        action={progressOrder.bind(
+                          null,
+                          order.id,
+                          action.status,
+                        )}
+                      >
+                        <button className="btn-primary">{action.label}</button>
+                      </form>
+                    )}
+                  </div>
+                )}
+              </div>
+              {order.status === "awaiting_supplier_confirmation" &&
+                !readOnly && (
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-sm font-semibold text-red-700">
+                      Cannot fulfil this order?
+                    </summary>
+                    <form
+                      action={rejectOrder.bind(null, order.id)}
+                      className="mt-3 flex gap-2"
+                    >
+                      <input
+                        className="input"
+                        name="reason"
+                        minLength={5}
+                        required
+                        placeholder="Reason, e.g. requested quantity unavailable"
+                      />
+                      <button className="btn-secondary">Reject order</button>
+                    </form>
+                  </details>
+                )}
+            </article>
+          );
+        })}
+        {!orders.length && (
+          <div className="card p-8 text-center text-slate-500">
+            No orders yet.
+          </div>
+        )}
+      </div>
+    </>
+  );
 }
 
-export function SupplierQuotesView({ requests, readOnly = false }: { requests: SupplierQuoteRequestView[]; readOnly?: boolean }) {
-  return <><h1 className="text-3xl font-black">Open quotation requests</h1><p className="mt-2 text-slate-600">Respond privately to customer material requests.</p><div className="mt-6 space-y-5">{requests.map(request=><article className="card p-6" key={request.id}><div className="flex flex-wrap justify-between gap-3"><div><h2 className="text-xl font-bold">{request.title}</h2><p className="text-sm text-slate-600">{request.delivery_location} · {request.required_date??"Flexible date"}</p></div><span className="text-xs text-slate-500">{new Date(request.created_at).toLocaleDateString()}</span></div><ul className="mt-4 list-disc pl-5 text-sm">{request.quote_request_items.map(item=><li key={item.description}>{item.description}</li>)}</ul>{request.notes&&<p className="mt-3 text-sm text-slate-600">{request.notes}</p>}{readOnly?<div className="mt-4 rounded-xl bg-slate-100 p-4 text-sm font-semibold text-slate-500">Quotation submission is disabled in Admin Preview Mode.</div>:<QuoteResponseForm requestId={request.id}/>}</article>)}{!requests.length&&<div className="card p-8 text-center text-slate-500">No open requests.</div>}</div></>;
+export function SupplierQuotesView({
+  requests,
+  readOnly = false,
+}: {
+  requests: SupplierQuoteRequestView[];
+  readOnly?: boolean;
+}) {
+  return (
+    <>
+      <h1 className="text-3xl font-black">Open quotation requests</h1>
+      <p className="mt-2 text-slate-600">
+        Respond privately to customer material requests.
+      </p>
+      <div className="mt-6 space-y-5">
+        {requests.map((request) => (
+          <article className="card p-6" key={request.id}>
+            <div className="flex flex-wrap justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-bold">{request.title}</h2>
+                <p className="text-sm text-slate-600">
+                  {request.delivery_location} ·{" "}
+                  {request.required_date ?? "Flexible date"}
+                </p>
+              </div>
+              <span className="text-xs text-slate-500">
+                {new Date(request.created_at).toLocaleDateString()}
+              </span>
+            </div>
+            <ul className="mt-4 list-disc pl-5 text-sm">
+              {request.quote_request_items.map((item) => (
+                <li key={item.description}>{item.description}</li>
+              ))}
+            </ul>
+            {request.notes && (
+              <p className="mt-3 text-sm text-slate-600">{request.notes}</p>
+            )}
+            {readOnly ? (
+              <div className="mt-4 rounded-xl bg-slate-100 p-4 text-sm font-semibold text-slate-500">
+                Quotation submission is disabled in Admin Preview Mode.
+              </div>
+            ) : (
+              <QuoteResponseForm requestId={request.id} />
+            )}
+          </article>
+        ))}
+        {!requests.length && (
+          <div className="card p-8 text-center text-slate-500">
+            No open requests.
+          </div>
+        )}
+      </div>
+    </>
+  );
 }
 
-export function SupplierProductsView({ listings, products = [], readOnly = false }: { listings: SupplierListingView[]; products?: { id: string; name: string; base_unit: string }[]; readOnly?: boolean }) {
-  const editable=listings.filter(listing=>isSupplierEditableStatus(listingStatus(listing)));
-  return <><h1 className="text-3xl font-black">Products and inventory</h1><p className="mt-2 text-slate-600">Complete drafts, publish prices and keep availability current.</p>{readOnly?<div className="mt-6 rounded-xl bg-slate-100 p-4 text-sm font-semibold text-slate-500">Adding and editing products is disabled in Admin Preview Mode.</div>:<>{editable.length>0&&<div className="mt-6 space-y-4"><h2 className="text-xl font-bold">Listings needing attention</h2>{editable.map(listing=><ListingForm key={listing.id} products={products} initial={{id:listing.id,productId:listing.product_id??"",sku:listing.sku,price:listing.price,wholesalePrice:listing.wholesale_price,wholesaleMinimum:listing.wholesale_minimum,stockQuantity:listing.stock_quantity,stockStatus:listing.stock_status,leadTimeDays:listing.lead_time_days,minimumOrderQuantity:listing.minimum_order_quantity,deliveryAvailable:listing.delivery_available,pickupAvailable:listing.pickup_available,supplierNotes:listing.supplier_notes,listingStatus:listing.listing_status}}/>)}</div>}<details className="mt-6"><summary className="cursor-pointer font-semibold text-brand-700">Add a single product manually</summary><div className="mt-3"><ListingForm products={products}/></div></details></>}<div className="card mt-6 overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead><tr className="border-b"><th className="p-4">Product</th><th>SKU</th><th>Price</th><th>Stock</th><th>Fulfilment</th><th>Lead time</th><th>Status</th><th /></tr></thead><tbody>{listings.map(listing=>{const product=Array.isArray(listing.products)?listing.products[0]:listing.products;const status=listing.listing_status??(listing.is_active?"published":"draft");return <tr className="border-b last:border-0" key={listing.id}><td className="p-4 font-semibold">{product?.name}</td><td>{listing.sku??"—"}</td><td>{listing.price==null?"Add price":`GHS ${Number(listing.price).toFixed(2)} / ${product?.base_unit}`}</td><td>{listing.stock_quantity??"—"} · {listing.stock_status.replaceAll("_"," ")}</td><td>{[listing.delivery_available&&"Delivery",listing.pickup_available&&"Pickup"].filter(Boolean).join(" + ")||"Not set"}</td><td>{listing.lead_time_days} days</td><td className="capitalize">{status.replaceAll("_"," ")}</td><td className="p-4">{readOnly?<span className="text-slate-400">Read only</span>:status==="published"?<form action={setListingActive.bind(null,listing.id,false)}><button className="font-semibold text-brand-700">Move to draft</button></form>:<span className="text-slate-400">{status==="suspended"?"Admin controlled":"Edit above"}</span>}</td></tr>})}{!listings.length&&<tr><td colSpan={8} className="p-6 text-center text-slate-500">No listings yet. Tick products from the catalogue above.</td></tr>}</tbody></table></div></>;
+export function SupplierProductsView({
+  listings,
+  products = [],
+  readOnly = false,
+}: {
+  listings: SupplierListingView[];
+  products?: { id: string; name: string; base_unit: string }[];
+  readOnly?: boolean;
+}) {
+  const editable = listings.filter((listing) =>
+    isSupplierEditableStatus(listingStatus(listing)),
+  );
+  return (
+    <>
+      <h1 className="text-3xl font-black">Products and inventory</h1>
+      <p className="mt-2 text-slate-600">
+        Complete drafts, publish prices and keep availability current.
+      </p>
+      {readOnly ? (
+        <div className="mt-6 rounded-xl bg-slate-100 p-4 text-sm font-semibold text-slate-500">
+          Adding and editing products is disabled in Admin Preview Mode.
+        </div>
+      ) : (
+        <>
+          {editable.length > 0 && (
+            <div className="mt-6 space-y-4">
+              <h2 className="text-xl font-bold">Listings needing attention</h2>
+              {editable.map((listing) => (
+                <ListingForm
+                  key={listing.id}
+                  products={products}
+                  initial={{
+                    id: listing.id,
+                    productId: listing.product_id ?? "",
+                    sku: listing.sku,
+                    price: listing.price,
+                    wholesalePrice: listing.wholesale_price,
+                    wholesaleMinimum: listing.wholesale_minimum,
+                    stockQuantity: listing.stock_quantity,
+                    stockStatus: listing.stock_status,
+                    leadTimeDays: listing.lead_time_days,
+                    minimumOrderQuantity: listing.minimum_order_quantity,
+                    deliveryAvailable: listing.delivery_available,
+                    pickupAvailable: listing.pickup_available,
+                    supplierNotes: listing.supplier_notes,
+                    listingStatus: listing.listing_status,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          <details className="mt-6">
+            <summary className="cursor-pointer font-semibold text-brand-700">
+              Add a single product manually
+            </summary>
+            <div className="mt-3">
+              <ListingForm products={products} />
+            </div>
+          </details>
+        </>
+      )}
+      <div className="card mt-6 overflow-x-auto">
+        <table className="w-full min-w-[900px] text-left text-sm">
+          <thead>
+            <tr className="border-b">
+              <th className="p-4">Product</th>
+              <th>SKU</th>
+              <th>Price</th>
+              <th>Stock</th>
+              <th>Fulfilment</th>
+              <th>Lead time</th>
+              <th>Status</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {listings.map((listing) => {
+              const product = Array.isArray(listing.products)
+                ? listing.products[0]
+                : listing.products;
+              const status =
+                listing.listing_status ??
+                (listing.is_active ? "published" : "draft");
+              return (
+                <tr className="border-b last:border-0" key={listing.id}>
+                  <td className="p-4 font-semibold">{product?.name}</td>
+                  <td>{listing.sku ?? "—"}</td>
+                  <td>
+                    {listing.price == null
+                      ? "Add price"
+                      : `GHS ${Number(listing.price).toFixed(2)} / ${product?.base_unit}`}
+                  </td>
+                  <td>
+                    {listing.stock_quantity ?? "—"} ·{" "}
+                    {listing.stock_status.replaceAll("_", " ")}
+                  </td>
+                  <td>
+                    {[
+                      listing.delivery_available && "Delivery",
+                      listing.pickup_available && "Pickup",
+                    ]
+                      .filter(Boolean)
+                      .join(" + ") || "Not set"}
+                  </td>
+                  <td>{listing.lead_time_days} days</td>
+                  <td className="capitalize">{status.replaceAll("_", " ")}</td>
+                  <td className="p-4">
+                    {readOnly ? (
+                      <span className="text-slate-400">Read only</span>
+                    ) : status === "published" ? (
+                      <form
+                        action={setListingActive.bind(null, listing.id, false)}
+                      >
+                        <button className="font-semibold text-brand-700">
+                          Move to draft
+                        </button>
+                      </form>
+                    ) : (
+                      <span className="text-slate-400">
+                        {status === "suspended"
+                          ? "Admin controlled"
+                          : "Edit above"}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {!listings.length && (
+              <tr>
+                <td colSpan={8} className="p-6 text-center text-slate-500">
+                  No listings yet. Tick products from the catalogue above.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
 }
 
-function listingStatus(listing:SupplierListingView):ListingStatus {
-  const status=listing.listing_status;
-  if(status==="draft"||status==="published"||status==="out_of_stock"||status==="seasonal"||status==="discontinued"||status==="suspended") return status;
-  return listing.is_active?"published":"draft";
+function listingStatus(listing: SupplierListingView): ListingStatus {
+  const status = listing.listing_status;
+  if (
+    status === "draft" ||
+    status === "published" ||
+    status === "out_of_stock" ||
+    status === "seasonal" ||
+    status === "discontinued" ||
+    status === "suspended"
+  )
+    return status;
+  return listing.is_active ? "published" : "draft";
 }
 
-export function SupplierSettlementsView({ entries, balance }: { entries: SettlementEntryView[]; balance: number }) {
-  return <><h1 className="text-3xl font-black">Settlements</h1><div className="card mt-6 p-6"><p className="text-sm text-slate-500">Available balance</p><p className="text-3xl font-black">GHS {balance.toFixed(2)}</p></div><div className="card mt-6 divide-y">{entries.map(entry=><div className="flex justify-between p-4" key={entry.id}><div><b>{entry.description}</b><p className="text-sm capitalize text-slate-500">{entry.status} · {new Date(entry.created_at).toLocaleDateString()}</p></div><b>GHS {Number(entry.amount).toFixed(2)}</b></div>)}{!entries.length&&<p className="p-8 text-center text-slate-500">No settlement entries.</p>}</div></>;
+export function SupplierSettlementsView({
+  entries,
+  balance,
+}: {
+  entries: SettlementEntryView[];
+  balance: number;
+}) {
+  return (
+    <>
+      <h1 className="text-3xl font-black">Settlements</h1>
+      <div className="card mt-6 p-6">
+        <p className="text-sm text-slate-500">Available balance</p>
+        <p className="text-3xl font-black">GHS {balance.toFixed(2)}</p>
+      </div>
+      <div className="card mt-6 divide-y">
+        {entries.map((entry) => (
+          <div className="flex justify-between p-4" key={entry.id}>
+            <div>
+              <b>{entry.description}</b>
+              <p className="text-sm capitalize text-slate-500">
+                {entry.status} ·{" "}
+                {new Date(entry.created_at).toLocaleDateString()}
+              </p>
+            </div>
+            <b>GHS {Number(entry.amount).toFixed(2)}</b>
+          </div>
+        ))}
+        {!entries.length && (
+          <p className="p-8 text-center text-slate-500">
+            No settlement entries.
+          </p>
+        )}
+      </div>
+    </>
+  );
 }

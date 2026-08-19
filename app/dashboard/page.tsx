@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCustomerOrganisationMembership } from "@/lib/organisations/access";
 import { customerNavigation } from "@/lib/organisations/navigation";
 import { getFeaturedProducts } from "@/lib/catalogue/featured-products";
+import { getCustomerOrders } from "@/lib/orders/customer";
 export default async function CustomerDashboard() {
   const { user } = await requireUser();
   const supabase = await createClient();
@@ -17,14 +18,9 @@ export default async function CustomerDashboard() {
     .from("quote_requests")
     .select("id", { count: "exact", head: true })
     .eq("status", "open");
-  let ordersQuery = supabase
-    .from("orders")
-    .select("id,order_number,status,total,updated_at")
-    .order("updated_at", { ascending: false });
   if (organisationId) {
     projectsQuery = projectsQuery.eq("organisation_id", organisationId);
     quotesQuery = quotesQuery.eq("organisation_id", organisationId);
-    ordersQuery = ordersQuery.eq("customer_organisation_id", organisationId);
   } else {
     projectsQuery = projectsQuery
       .eq("owner_id", user.id)
@@ -32,15 +28,12 @@ export default async function CustomerDashboard() {
     quotesQuery = quotesQuery
       .eq("requester_id", user.id)
       .is("organisation_id", null);
-    ordersQuery = ordersQuery
-      .eq("customer_id", user.id)
-      .is("customer_organisation_id", null);
   }
-  const [{ count: projects }, { count: quotes }, { data: orders }, products] =
+  const [{ count: projects }, { count: quotes }, orders, products] =
     await Promise.all([
       projectsQuery,
       quotesQuery,
-      ordersQuery,
+      getCustomerOrders({ userId: user.id, organisationId }),
       getFeaturedProducts(4),
     ]);
   return (
@@ -51,7 +44,7 @@ export default async function CustomerDashboard() {
       <CustomerOverview
         projects={projects ?? 0}
         openQuotes={quotes ?? 0}
-        orders={orders ?? []}
+        orders={orders}
         products={products}
       />
     </DashboardShell>

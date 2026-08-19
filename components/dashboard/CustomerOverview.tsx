@@ -1,6 +1,10 @@
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { ProductCard, type Product } from "@/components/commerce/ProductCard";
 import Link from "next/link";
+import {
+  customerOrderStatusLabel,
+  isActiveCustomerOrder,
+} from "@/lib/orders/customer";
 
 type CustomerOrder = {
   id?: string;
@@ -20,9 +24,7 @@ export function CustomerOverview({
   orders: CustomerOrder[];
   products?: Product[];
 }) {
-  const active = orders.filter(
-    (order) => !["completed", "cancelled", "refunded"].includes(order.status),
-  );
+  const active = orders.filter((order) => isActiveCustomerOrder(order.status));
   const committed = active.reduce((sum, order) => sum + Number(order.total), 0);
 
   return (
@@ -78,15 +80,14 @@ export function CustomerOverview({
         <h2 className="text-xl font-bold">Recent orders</h2>
         <div className="mt-4 divide-y">
           {orders.slice(0, 5).map((order, index) => (
-            <div
-              className="flex justify-between py-4 text-sm"
+            <Link
+              href={`/dashboard/orders/${order.id}`}
+              className="flex justify-between py-4 text-sm hover:text-brand-700"
               key={order.id ?? `${order.order_number}-${index}`}
             >
               <span>{order.order_number}</span>
-              <span className="capitalize">
-                {order.status.replaceAll("_", " ")}
-              </span>
-            </div>
+              <span>{customerOrderStatusLabel(order.status)}</span>
+            </Link>
           ))}
           {!orders.length && (
             <div className="py-4 text-sm text-slate-500">
