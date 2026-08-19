@@ -35,6 +35,14 @@ export type SupplierOrderView = {
   fulfilment_method?: string;
   payment_method?: string;
   supplier_received_at?: string | null;
+  created_at?: string;
+  customer?: { full_name: string | null } | null;
+  order_items?: {
+    product_name_snapshot: string;
+    quantity: number;
+    unit: string;
+  }[];
+  order_cash_payments?: { recorded_at: string }[];
 };
 export type SupplierQuoteRequestView = {
   id: string;
@@ -233,57 +241,109 @@ export function SupplierOrdersView({
       <p className="mt-2 text-slate-600">
         Acknowledge new requests, then accept only what you can fulfil.
       </p>
+      <div className="mt-5 flex flex-wrap gap-2 text-sm">
+        <a className="btn-secondary" href="#new">
+          New orders
+        </a>
+        <a className="btn-secondary" href="#active">
+          In progress
+        </a>
+        <a className="btn-secondary" href="#closed">
+          Completed / cancelled
+        </a>
+      </div>
       <div className="mt-6 space-y-4">
         {orders.map((order) => {
           const action = nextOrder[order.status];
+          const acknowledged = Boolean(order.supplier_received_at);
+          const paymentRecorded = Boolean(order.order_cash_payments?.length);
+          const section =
+            order.status === "awaiting_supplier_confirmation"
+              ? "new"
+              : ["completed", "cancelled", "refunded"].includes(order.status)
+                ? "closed"
+                : "active";
+          const displayStatus =
+            order.status === "awaiting_supplier_confirmation"
+              ? acknowledged
+                ? "Received — decision required"
+                : "New Order"
+              : order.status === "ready_for_dispatch"
+                ? order.fulfilment_method === "pickup"
+                  ? "Ready for Pickup"
+                  : "Ready for Dispatch"
+                : customerOrderStatusLabel(order.status);
           return (
             <article
+              id={section}
               className={`card p-5 ${order.status === "awaiting_supplier_confirmation" ? "border-2 border-brand-500" : ""}`}
               key={order.id}
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <b>{order.order_number}</b>
+                  <b className="text-lg">{order.order_number}</b>
+                  <p className="text-sm font-semibold">
+                    Customer: {order.customer?.full_name ?? "Customer"}
+                  </p>
                   <p className="text-sm text-slate-600">
                     {order.fulfilment_method === "pickup"
                       ? "Supplier pickup"
                       : order.delivery_address}
                   </p>
                   <p className="mt-1 font-semibold capitalize">
-                    {order.status.replaceAll("_", " ")} · GHS{" "}
-                    {Number(order.total).toFixed(2)}
+                    {displayStatus} · GHS {Number(order.total).toFixed(2)}
                   </p>
                   <p className="mt-1 text-xs font-semibold text-brand-700">
                     {order.payment_method === "cash_on_pickup"
                       ? "Cash on Pickup"
-                      : "Cash on Delivery"}
+                      : "Cash on Delivery"}{" "}
+                    — {paymentRecorded ? "Recorded" : "Pending"}
                   </p>
                 </div>
-                {!readOnly && (
-                  <div className="flex flex-wrap gap-2">
-                    {order.status === "awaiting_supplier_confirmation" &&
-                      !order.supplier_received_at && (
-                        <form action={acknowledgeOrder.bind(null, order.id)}>
-                          <button className="btn-secondary">
-                            Mark received
-                          </button>
-                        </form>
-                      )}
-                    {action && (
-                      <form
-                        action={progressOrder.bind(
-                          null,
-                          order.id,
-                          action.status,
+                <div className="flex flex-wrap gap-2">
+                  {!readOnly && (
+                    <Link
+                      className="btn-secondary"
+                      href={`/supplier/orders/${order.id}`}
+                    >
+                      View order
+                    </Link>
+                  )}
+                  {!readOnly && (
+                    <>
+                      {order.status === "awaiting_supplier_confirmation" &&
+                        !acknowledged && (
+                          <form action={acknowledgeOrder.bind(null, order.id)}>
+                            <button className="btn-secondary">
+                              Acknowledge Order
+                            </button>
+                          </form>
                         )}
-                      >
-                        <button className="btn-primary">{action.label}</button>
-                      </form>
-                    )}
-                  </div>
-                )}
+                      {action &&
+                        (order.status !== "awaiting_supplier_confirmation" ||
+                          acknowledged) && (
+                          <form
+                            action={progressOrder.bind(
+                              null,
+                              order.id,
+                              action.status,
+                            )}
+                          >
+                            <button className="btn-primary">
+                              {order.status === "preparing"
+                                ? order.fulfilment_method === "pickup"
+                                  ? "Mark Ready for Pickup"
+                                  : "Mark Ready for Dispatch"
+                                : action.label}
+                            </button>
+                          </form>
+                        )}
+                    </>
+                  )}
+                </div>
               </div>
               {order.status === "awaiting_supplier_confirmation" &&
+                acknowledged &&
                 !readOnly && (
                   <details className="mt-4">
                     <summary className="cursor-pointer text-sm font-semibold text-red-700">
@@ -309,7 +369,7 @@ export function SupplierOrdersView({
         })}
         {!orders.length && (
           <div className="card p-8 text-center text-slate-500">
-            No orders yet.
+            No new orders require your attention.
           </div>
         )}
       </div>

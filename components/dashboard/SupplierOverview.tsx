@@ -1,4 +1,5 @@
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import Link from "next/link";
 
 type SupplierOrder = {
   id: string;
@@ -16,14 +17,20 @@ export function SupplierOverview({
   orders: SupplierOrder[];
   activeListings: number;
   quoteStatuses: string[];
-  financials?: Record<string,number|null>;
+  financials?: Record<string, number | null>;
 }) {
-  const completed = orders.filter(order => order.status === "completed");
-  const revenue = completed.reduce((sum, order) => sum + Number(order.total), 0);
-  const active = orders.filter(
-    order => !["completed", "cancelled", "refunded"].includes(order.status),
+  const completed = orders.filter((order) => order.status === "completed");
+  const revenue = completed.reduce(
+    (sum, order) => sum + Number(order.total),
+    0,
   );
-  const won = quoteStatuses.filter(status => status === "accepted").length;
+  const active = orders.filter(
+    (order) => !["completed", "cancelled", "refunded"].includes(order.status),
+  );
+  const won = quoteStatuses.filter((status) => status === "accepted").length;
+  const newOrders = orders.filter(
+    (order) => order.status === "awaiting_supplier_confirmation",
+  );
 
   return (
     <>
@@ -32,12 +39,58 @@ export function SupplierOverview({
         Live trading and fulfilment information.
       </p>
       <div className="mt-6 grid gap-4 md:grid-cols-4">
-        <MetricCard label="Sales this month" value={`GHS ${Number(financials?.sales??0).toFixed(2)}`} detail="Completed sales only" />
-        <MetricCard label="COGS this month" value={financials?.cogs==null?"Restricted":`GHS ${Number(financials.cogs).toFixed(2)}`} detail="Frozen weighted-average basis" />
-        <MetricCard label="Realised gross margin" value={financials?.realised_gross_margin==null?"Restricted":`GHS ${Number(financials.realised_gross_margin).toFixed(2)}`} detail="Sales less COGS" />
-        <MetricCard label="Inventory cost value" value={financials?.cost_value==null?"Restricted":`GHS ${Number(financials.cost_value).toFixed(2)}`} detail="Current available stock" />
-        <MetricCard label="Potential retail value" value={`GHS ${Number(financials?.retail_value??0).toFixed(2)}`} detail="Not realised profit" />
-        <MetricCard label="Low / out of stock" value={`${financials?.low_stock??0} / ${financials?.out_of_stock??0}`} detail="Inventory attention" />
+        <div className="card p-5">
+          <p className="text-sm font-semibold text-slate-500">New Orders</p>
+          <p className="mt-2 text-3xl font-black">{newOrders.length}</p>
+          <Link
+            className="mt-3 inline-block font-semibold text-brand-700"
+            href="/supplier/orders#new"
+          >
+            Review orders →
+          </Link>
+        </div>
+        <MetricCard
+          label="Sales this month"
+          value={`GHS ${Number(financials?.sales ?? 0).toFixed(2)}`}
+          detail="Completed sales only"
+        />
+        <MetricCard
+          label="COGS this month"
+          value={
+            financials?.cogs == null
+              ? "Restricted"
+              : `GHS ${Number(financials.cogs).toFixed(2)}`
+          }
+          detail="Frozen weighted-average basis"
+        />
+        <MetricCard
+          label="Realised gross margin"
+          value={
+            financials?.realised_gross_margin == null
+              ? "Restricted"
+              : `GHS ${Number(financials.realised_gross_margin).toFixed(2)}`
+          }
+          detail="Sales less COGS"
+        />
+        <MetricCard
+          label="Inventory cost value"
+          value={
+            financials?.cost_value == null
+              ? "Restricted"
+              : `GHS ${Number(financials.cost_value).toFixed(2)}`
+          }
+          detail="Current available stock"
+        />
+        <MetricCard
+          label="Potential retail value"
+          value={`GHS ${Number(financials?.retail_value ?? 0).toFixed(2)}`}
+          detail="Not realised profit"
+        />
+        <MetricCard
+          label="Low / out of stock"
+          value={`${financials?.low_stock ?? 0} / ${financials?.out_of_stock ?? 0}`}
+          detail="Inventory attention"
+        />
         <MetricCard
           label="Completed revenue"
           value={`GHS ${revenue.toFixed(2)}`}
@@ -50,7 +103,11 @@ export function SupplierOverview({
         />
         <MetricCard
           label="Quote win rate"
-          value={quoteStatuses.length ? `${Math.round((won / quoteStatuses.length) * 100)}%` : "—"}
+          value={
+            quoteStatuses.length
+              ? `${Math.round((won / quoteStatuses.length) * 100)}%`
+              : "—"
+          }
           detail={`${quoteStatuses.length} quotations submitted`}
         />
         <MetricCard
@@ -62,15 +119,18 @@ export function SupplierOverview({
       <div className="card mt-6 p-6">
         <h2 className="text-xl font-bold">Recent orders</h2>
         <div className="mt-4 divide-y">
-          {orders.slice(0, 5).map(order => (
+          {orders.slice(0, 5).map((order) => (
             <div className="flex justify-between py-4 text-sm" key={order.id}>
               <span>{order.order_number}</span>
               <span className="capitalize">
-                {order.status.replaceAll("_", " ")} · GHS {Number(order.total).toFixed(2)}
+                {order.status.replaceAll("_", " ")} · GHS{" "}
+                {Number(order.total).toFixed(2)}
               </span>
             </div>
           ))}
-          {!orders.length && <p className="py-4 text-sm text-slate-500">No orders yet.</p>}
+          {!orders.length && (
+            <p className="py-4 text-sm text-slate-500">No orders yet.</p>
+          )}
         </div>
       </div>
     </>
