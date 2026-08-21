@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import {
@@ -13,19 +13,28 @@ import {
   type InventoryActionState,
 } from "@/app/supplier/inventory/actions";
 import { ConfirmInventoryAction } from "./ConfirmInventoryAction";
+import { inventoryOperationEvent } from "./OpenInventoryOperationButton";
 
 export type InventoryListingOption = {
   id: string;
+  productId: string;
+  variantId: string | null;
   label: string;
   product: string;
   variant: string | null;
   price: number | null;
   onHand: number | null;
+  reserved: number | null;
   available: number | null;
   averageCost: number | null;
   inventoryMode: string;
   reorderPoint: number | null;
   imageUrl: string | null;
+  branch: string | null;
+  branchIsMain: boolean;
+  marketplace: string;
+  listingStatus: string;
+  unit: string | null;
 };
 type DialogName =
   "receive" | "adjust" | "transfer" | "count" | "settings" | "setup";
@@ -40,20 +49,44 @@ function Status({ state }: { state: InventoryActionState }) {
     </p>
   ) : null;
 }
+function SummaryValue({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="min-w-0 rounded-xl bg-white p-3 shadow-sm">
+      <p className="text-[11px] font-bold uppercase text-slate-500">{label}</p>
+      <p className="mt-1 break-words text-sm font-black text-slate-900">
+        {value}
+      </p>
+    </div>
+  );
+}
 function ListingSelect({
   name,
   listings,
   defaultValue,
+  onChange,
+  locked = false,
+  canViewCost = true,
 }: {
   name: string;
   listings: InventoryListingOption[];
   defaultValue?: string;
+  onChange?: (listingId: string) => void;
+  locked?: boolean;
+  canViewCost?: boolean;
 }) {
   return (
     <select
       className="input"
       name={name}
       defaultValue={defaultValue ?? ""}
+      onChange={(event) => onChange?.(event.currentTarget.value)}
+      disabled={locked}
       required
     >
       <option value="">Choose product</option>
@@ -63,6 +96,15 @@ function ListingSelect({
           key={item.id}
           data-on-hand={item.onHand ?? 0}
           data-average-cost={item.averageCost ?? 0}
+          data-can-view-cost={String(canViewCost)}
+          data-reserved={item.reserved ?? 0}
+          data-available={item.available ?? 0}
+          data-price={item.price ?? ""}
+          data-marketplace={item.marketplace}
+          data-product={item.product}
+          data-variant={item.variant ?? "Standard"}
+          data-branch={item.branch ?? "Unassigned"}
+          data-unit={item.unit ?? "units"}
         >
           {item.label}
         </option>
@@ -94,6 +136,7 @@ export function InventoryOperationForms({
   canAdjust,
   canTransfer,
   canConfigure,
+  canViewCost,
   branchName,
   branchCount,
   warehouseCount,
@@ -105,6 +148,7 @@ export function InventoryOperationForms({
   canAdjust: boolean;
   canTransfer: boolean;
   canConfigure: boolean;
+  canViewCost: boolean;
   branchName?: string;
   branchCount: number;
   warehouseCount: number;
@@ -113,6 +157,7 @@ export function InventoryOperationForms({
 }) {
   const searchParams = useSearchParams();
   const receiveListing = searchParams.get("receive") ?? undefined;
+  const requestedOperation = searchParams.get("operation") as DialogName | null;
   const dialogs = useRef<Record<DialogName, HTMLDialogElement | null>>({
     receive: null,
     adjust: null,
@@ -124,6 +169,14 @@ export function InventoryOperationForms({
   const [receiveState, receiveAction, receivePending] = useActionState(
     receiveStock,
     initial,
+  );
+  const [selectedReceiveId, setSelectedReceiveId] = useState(
+    receiveListing ?? "",
+  );
+  const [rowLocked, setRowLocked] = useState(Boolean(receiveListing));
+  const selectedReceive = useMemo(
+    () => listings.find((item) => item.id === selectedReceiveId) ?? null,
+    [listings, selectedReceiveId],
   );
   const [adjustState, adjustAction, adjustPending] = useActionState(
     adjustStock,
@@ -188,11 +241,34 @@ export function InventoryOperationForms({
     },
     initial,
   );
-  const open = (name: DialogName) => dialogs.current[name]?.showModal();
+  const open = (name: DialogName, listingId?: string) => {
+    if (name === "receive") {
+      setSelectedReceiveId(listingId ?? "");
+      setRowLocked(Boolean(listingId));
+    }
+    dialogs.current[name]?.showModal();
+  };
   const close = (name: DialogName) => dialogs.current[name]?.close();
   useEffect(() => {
     if (receiveListing && canReceive && dialogs.current.receive && !dialogs.current.receive.open) dialogs.current.receive.showModal();
   }, [receiveListing, canReceive]);
+  useEffect(() => {
+    const handleOperation = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        operation?: DialogName;
+        listingId?: string;
+      }>).detail;
+      if (detail?.operation) open(detail.operation, detail.listingId);
+    };
+    window.addEventListener(inventoryOperationEvent, handleOperation);
+    if (requestedOperation && dialogs.current[requestedOperation]) {
+      open(requestedOperation);
+    }
+    return () =>
+      window.removeEventListener(inventoryOperationEvent, handleOperation);
+    // URL parameters are compatibility entry points and only open once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   if (branchCount === 0)
     return (
       <section className="card mt-6 border-amber-200 bg-amber-50 p-5">
@@ -211,7 +287,7 @@ export function InventoryOperationForms({
   return (
     <>
       <div className="mt-5 flex flex-wrap gap-2">
-        {canReceive && canConfigure && (
+        {canReceive && (
           <button
             className="btn-primary"
             type="button"
@@ -293,14 +369,45 @@ export function InventoryOperationForms({
         onClose={() => close("receive")}
       >
         <form action={receiveAction}>
-          <LocationContext
-            branchName={branchCount === 1 ? branchName : undefined}
-            warehouseCount={warehouseCount}
-          />
+          {selectedReceive && (
+            <section className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Product</p>
+                  <h3 className="mt-1 text-lg font-black text-slate-950">
+                    {selectedReceive.product}
+                    {selectedReceive.variant ? ` — ${selectedReceive.variant}` : ""}
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-700">
+                    {selectedReceive.branch ?? "Unassigned"}
+                    {selectedReceive.branchIsMain ? " · Main Branch" : ""}
+                  </p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-bold ${selectedReceive.marketplace === "Visible" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>
+                  {selectedReceive.marketplace}
+                </span>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <SummaryValue label="Selling price" value={selectedReceive.price == null ? "Not set" : `GHS ${selectedReceive.price.toFixed(2)}${selectedReceive.unit ? ` / ${selectedReceive.unit}` : ""}`} />
+                <SummaryValue label="On hand" value={selectedReceive.onHand ?? "—"} />
+                <SummaryValue label="Reserved" value={selectedReceive.reserved ?? "—"} />
+                <SummaryValue label="Available" value={selectedReceive.available ?? "—"} />
+                <SummaryValue label="Average cost" value={!canViewCost ? "Restricted" : selectedReceive.averageCost == null ? "Not yet set" : `GHS ${selectedReceive.averageCost.toFixed(2)}`} />
+                <SummaryValue label="Inventory" value={selectedReceive.onHand == null ? "Needs stock setup" : selectedReceive.inventoryMode.replaceAll("_", " ")} />
+              </div>
+              <a className="mt-3 inline-flex text-sm font-bold text-emerald-800 underline" href={`/supplier/products#listing-${selectedReceive.id}`}>
+                Edit price
+              </a>
+            </section>
+          )}
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="sm:col-span-2">
               <span className="label">Product</span>
-              <ListingSelect name="listingId" listings={listings} defaultValue={receiveListing} />
+              <ListingSelect key={selectedReceiveId || "global-receive"} name="listingId" listings={listings} defaultValue={selectedReceiveId} onChange={setSelectedReceiveId} locked={rowLocked} canViewCost={canViewCost} />
+              {rowLocked && selectedReceiveId && <input type="hidden" name="listingId" value={selectedReceiveId} />}
+              {selectedReceive?.branch && (
+                <input type="hidden" name="listingHasLocation" value="true" />
+              )}
             </label>
             <label>
               <span className="label">Quantity</span>
@@ -338,6 +445,7 @@ export function InventoryOperationForms({
                 className="input"
                 name="receivedDate"
                 type="date"
+                defaultValue={new Date().toISOString().slice(0, 10)}
                 required
               />
             </label>
@@ -349,7 +457,7 @@ export function InventoryOperationForms({
           <ConfirmInventoryAction
             kind="receipt"
             disabled={receivePending}
-            label={receivePending ? "Recording…" : "Review receipt"}
+            label={receivePending ? "Saving stock…" : "Review receipt"}
           />
           <Status state={receiveState} />
         </form>
@@ -733,7 +841,9 @@ function InventoryDialog({
           Close
         </button>
       </div>
-      <div className="max-h-[78vh] overflow-y-auto p-6">{children}</div>
+      <div className="max-h-[78vh] overflow-y-auto p-6 pb-24 sm:pb-6">
+        {children}
+      </div>
     </dialog>
   );
 }

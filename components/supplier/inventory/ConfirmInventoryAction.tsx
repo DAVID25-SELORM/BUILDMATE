@@ -15,6 +15,7 @@ export function ConfirmInventoryAction({
   function open(event: React.MouseEvent<HTMLButtonElement>) {
     const form = event.currentTarget.form;
     if (!form) return;
+    if (!form.reportValidity()) return;
     formRef.current = form;
     const data = new FormData(form),
       get = (name: string) => String(data.get(name) ?? ""),
@@ -25,21 +26,41 @@ export function ConfirmInventoryAction({
     if (kind === "receipt") {
       const option = select("listingId")?.selectedOptions[0],
         current = Number(option?.dataset.onHand ?? 0),
+        reserved = Number(option?.dataset.reserved ?? 0),
         existingCost = Number(option?.dataset.averageCost ?? 0),
         quantity = Number(get("quantity")),
         unitCost = Number(get("unitCost")),
+        price = Number(option?.dataset.price ?? 0),
+        canViewCost = option?.dataset.canViewCost !== "false",
         projected = current + quantity,
+        projectedAvailable = projected - reserved,
         weighted =
           projected > 0
             ? (current * existingCost + quantity * unitCost) / projected
-            : 0;
+            : 0,
+        stockValue = projected * weighted,
+        salesValue = projectedAvailable * price,
+        margin = salesValue - projectedAvailable * weighted,
+        before = option?.dataset.marketplace ?? "Hidden",
+        after = before.includes("Draft")
+          ? "Ready to publish (draft remains unpublished)"
+          : before.includes("Stock") || before.includes("stock")
+            ? "Visible after receipt"
+            : before;
       setLines([
-        `Product and location: ${selected("listingId")}`,
-        `Current: ${current} units`,
-        `Receiving: +${quantity || 0}`,
-        `New on-hand: ${projected || 0}`,
-        `Existing average cost: GHS ${existingCost.toFixed(2)}`,
-        `Projected weighted average: GHS ${weighted.toFixed(2)}`,
+        `${option?.dataset.product ?? selected("listingId")} — ${option?.dataset.variant ?? "Standard"}`,
+        `Location: ${option?.dataset.branch ?? "Selected location"}`,
+        `Current on hand: ${current}`,
+        `Quantity received: +${quantity}`,
+        `New on hand: ${projected}`,
+        `Receipt unit cost: GHS ${unitCost.toFixed(2)}`,
+        `Projected weighted average cost: ${canViewCost ? `GHS ${weighted.toFixed(2)}` : "Restricted"}`,
+        `Projected stock cost value: ${canViewCost ? `GHS ${stockValue.toFixed(2)}` : "Restricted"}`,
+        `Selling price: GHS ${price.toFixed(2)}`,
+        `Potential sales value: GHS ${salesValue.toFixed(2)}`,
+        `Potential gross margin: ${canViewCost ? `GHS ${margin.toFixed(2)}` : "Restricted"}`,
+        `Marketplace before: ${before}`,
+        `Marketplace after: ${after}`,
       ]);
     } else if (kind === "adjustment") {
       const physical = get("physicalQuantity"),
@@ -88,7 +109,9 @@ export function ConfirmInventoryAction({
         className="m-auto w-full max-w-lg rounded-2xl p-0 backdrop:bg-slate-950/40"
       >
         <div className="p-6">
-          <h3 className="text-xl font-black">Confirm {kind}</h3>
+          <h3 className="text-xl font-black">
+            {kind === "receipt" ? "Review Stock Receipt" : `Confirm ${kind}`}
+          </h3>
           <ul className="mt-4 space-y-2 text-sm">
             {lines.map((line) => (
               <li className="rounded-lg bg-slate-50 p-2" key={line}>
@@ -107,12 +130,17 @@ export function ConfirmInventoryAction({
             <button
               type="button"
               className="btn-primary"
+              disabled={disabled}
               onClick={() => {
                 dialog.current?.close();
                 formRef.current?.requestSubmit();
               }}
             >
-              Confirm and submit
+              {disabled
+                ? "Saving stock…"
+                : kind === "receipt"
+                  ? "Confirm Stock Receipt"
+                  : "Confirm and submit"}
             </button>
           </div>
         </div>

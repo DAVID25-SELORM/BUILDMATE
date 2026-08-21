@@ -78,14 +78,20 @@ export async function receiveStock(
   const listing = uuid(formData.get("listingId")),
     quantity = positive(formData.get("quantity")),
     unitCost = positive(formData.get("unitCost"));
-  if (!listing || !quantity || unitCost === null)
-    return { error: "Choose a product and enter valid quantity and unit cost" };
-  const locationError = await ensureListingLocation(
-    supabase,
-    membership.organisationId,
-    listing,
-  );
-  if (locationError) return { error: locationError };
+  if (!listing) return { error: "Choose a product." };
+  if (!quantity) return { error: "Quantity must be greater than zero." };
+  if (unitCost === null) return { error: "Unit cost must be greater than zero." };
+  // A preloaded branch lets the authoritative receipt RPC validate the
+  // location directly. Legacy unassigned listings retain the single-branch
+  // auto-assignment path.
+  if (formData.get("listingHasLocation") !== "true") {
+    const locationError = await ensureListingLocation(
+      supabase,
+      membership.organisationId,
+      listing,
+    );
+    if (locationError) return { error: locationError };
+  }
   const receivedDate = String(formData.get("receivedDate") ?? "");
   if (!receivedDate) return { error: "Enter the truthful receipt date" };
   const invoice = String(formData.get("invoice") ?? "").trim();
@@ -102,8 +108,9 @@ export async function receiveStock(
   });
   if (error) return { error: error.message };
   revalidatePath("/supplier/inventory");
-  revalidatePath("/supplier/products");
-  return { message: "Stock receipt recorded" };
+  return {
+    message: `Stock received successfully. ${quantity} units were added.`,
+  };
 }
 
 export async function adjustStock(

@@ -4,6 +4,7 @@ import { ReturnProcessing } from "@/components/supplier/inventory/ReturnProcessi
 import { SupplierPageHeader } from "@/components/supplier/SupplierPageHeader";
 import { requireSupplierPermission } from "@/lib/organisations/access";
 import { assignUnassignedListings } from "@/app/supplier/inventory/actions";
+import { OpenInventoryOperationButton } from "@/components/supplier/inventory/OpenInventoryOperationButton";
 
 type Row = {
   listing_id: string;
@@ -80,7 +81,7 @@ export default async function SupplierInventoryPage({
     supabase
       .from("supplier_listings")
       .select(
-        "id,price,stock_quantity,stock_status,inventory_mode,listing_status,is_active,branch_id,products(name),product_variants(name),supplier_branches(name),supplier_warehouses(name),product_media(storage_path,is_cover,sort_order)",
+        "id,product_id,product_variant_id,price,stock_quantity,stock_status,inventory_mode,listing_status,is_active,branch_id,products(name,base_unit),product_variants(name),supplier_branches(name,is_main_branch),supplier_warehouses(name),product_media(storage_path,is_cover,sort_order)",
       )
       .eq("supplier_id", membership.organisationId)
       .order("created_at"),
@@ -151,6 +152,7 @@ export default async function SupplierInventoryPage({
       } | null;
       const branch = listing.supplier_branches as unknown as {
         name: string;
+        is_main_branch: boolean;
       } | null;
       const warehouse = listing.supplier_warehouses as unknown as {
         name: string;
@@ -174,8 +176,12 @@ export default async function SupplierInventoryPage({
                 .getPublicUrl(media.storage_path).data.publicUrl
             : null,
           listingStatus: listing.listing_status,
+          branchName: branch?.name ?? null,
+          branchIsMain: branch?.is_main_branch ?? false,
           marketplace:
-            listing.listing_status !== "published"
+            listing.listing_status === "out_of_stock"
+              ? "Hidden — No Stock"
+              : listing.listing_status !== "published"
               ? "Hidden — Draft"
               : listing.price == null
                 ? "Hidden — Missing Price"
@@ -196,18 +202,36 @@ export default async function SupplierInventoryPage({
       ] as const;
     }),
   );
+  const listingRecords = new Map(
+    (listings ?? []).map((listing) => [listing.id, listing] as const),
+  );
   const options = dashboard.rows.map((row) => ({
     id: row.listing_id,
+    productId: listingRecords.get(row.listing_id)?.product_id ?? "",
+    variantId:
+      listingRecords.get(row.listing_id)?.product_variant_id ?? null,
     label: listingLabels.get(row.listing_id)?.label ?? row.product,
     imageUrl: listingLabels.get(row.listing_id)?.imageUrl ?? null,
     product: row.product,
     variant: row.variant,
     price: row.selling_price,
     onHand: row.on_hand,
+    reserved: row.reserved,
     available: row.available,
     averageCost: row.average_cost,
     inventoryMode: row.inventory_mode,
     reorderPoint: row.reorder_point,
+    branch: listingLabels.get(row.listing_id)?.branchName ?? row.branch,
+    branchIsMain:
+      listingLabels.get(row.listing_id)?.branchIsMain ?? false,
+    marketplace:
+      listingLabels.get(row.listing_id)?.marketplace ?? "Hidden",
+    listingStatus:
+      listingLabels.get(row.listing_id)?.listingStatus ?? "draft",
+    unit:
+      (listingRecords.get(row.listing_id)?.products as unknown as {
+        base_unit?: string;
+      } | null)?.base_unit ?? null,
   }));
   const singleBranch = branches?.length === 1 ? branches[0] : null;
   const hasTrackedInventory = dashboard.rows.some((row) => row.on_hand != null);
@@ -295,30 +319,30 @@ export default async function SupplierInventoryPage({
         <Link className="btn-primary" href="/supplier/products#add-product">
           + Add Product
         </Link>
-        <Link
+        <OpenInventoryOperationButton
           className="btn-secondary"
-          href="/supplier/inventory?operation=receive"
+          operation="receive"
         >
           Receive Stock
-        </Link>
-        <Link
+        </OpenInventoryOperationButton>
+        <OpenInventoryOperationButton
           className="btn-secondary"
-          href="/supplier/inventory?operation=adjust"
+          operation="adjust"
         >
           Adjust
-        </Link>
-        <Link
+        </OpenInventoryOperationButton>
+        <OpenInventoryOperationButton
           className="btn-secondary"
-          href="/supplier/inventory?operation=count"
+          operation="count"
         >
           Count
-        </Link>
-        <Link
+        </OpenInventoryOperationButton>
+        <OpenInventoryOperationButton
           className="btn-secondary"
-          href="/supplier/inventory?operation=transfer"
+          operation="transfer"
         >
           Transfer
-        </Link>
+        </OpenInventoryOperationButton>
       </div>
       {(listings ?? []).some((listing) => !listing.branch_id) && (
         <form action={assignUnassignedListings} className="card mt-5 p-5">
@@ -380,6 +404,7 @@ export default async function SupplierInventoryPage({
         canAdjust={adjust === true}
         canTransfer={transfer === true}
         canConfigure={configure === true}
+        canViewCost={dashboard.can_view_cost}
         branchName={singleBranch?.name}
         branchCount={branches?.length ?? 0}
         warehouseCount={warehouses?.length ?? 0}
@@ -582,12 +607,13 @@ export default async function SupplierInventoryPage({
                     : "None"}
                 </td>
                 <td>
-                  <Link
+                  <OpenInventoryOperationButton
                     className="mb-2 inline-flex min-h-10 items-center rounded-xl bg-emerald-800 px-3 text-xs font-bold text-white hover:bg-emerald-900"
-                    href={`/supplier/inventory?receive=${row.listing_id}`}
+                    operation="receive"
+                    listingId={row.listing_id}
                   >
                     {row.on_hand == null ? "Add Stock" : "Receive Stock"}
-                  </Link>
+                  </OpenInventoryOperationButton>
                   <details className="relative">
                     <summary className="cursor-pointer font-bold text-brand-700">
                       Actions
