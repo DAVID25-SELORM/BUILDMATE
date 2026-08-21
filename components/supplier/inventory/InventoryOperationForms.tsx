@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import {
   adjustStock,
   configureInventory,
@@ -110,6 +111,8 @@ export function InventoryOperationForms({
   setupProgress?: { listing_id: string; status: string; updated_at: string }[];
   setupLastSavedAt?: string | null;
 }) {
+  const searchParams = useSearchParams();
+  const receiveListing = searchParams.get("receive") ?? undefined;
   const dialogs = useRef<Record<DialogName, HTMLDialogElement | null>>({
     receive: null,
     adjust: null,
@@ -187,6 +190,9 @@ export function InventoryOperationForms({
   );
   const open = (name: DialogName) => dialogs.current[name]?.showModal();
   const close = (name: DialogName) => dialogs.current[name]?.close();
+  useEffect(() => {
+    if (receiveListing && canReceive && dialogs.current.receive && !dialogs.current.receive.open) dialogs.current.receive.showModal();
+  }, [receiveListing, canReceive]);
   if (branchCount === 0)
     return (
       <section className="card mt-6 border-amber-200 bg-amber-50 p-5">
@@ -294,7 +300,7 @@ export function InventoryOperationForms({
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="sm:col-span-2">
               <span className="label">Product</span>
-              <ListingSelect name="listingId" listings={listings} />
+              <ListingSelect name="listingId" listings={listings} defaultValue={receiveListing} />
             </label>
             <label>
               <span className="label">Quantity</span>

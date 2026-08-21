@@ -68,7 +68,8 @@ export default async function ProductOffersPage({
       .eq("is_active", true)
       .eq("organisations.verification_status", "approved")
       .eq("organisations.account_status", "active")
-      .neq("stock_status", "out_of_stock")
+      .not("branch_id", "is", null)
+      .or("and(inventory_mode.eq.exact_quantity,stock_quantity.gt.0),and(inventory_mode.eq.status_only,stock_status.eq.in_stock)")
       .order("price"),
   ]);
   if (!product) notFound();

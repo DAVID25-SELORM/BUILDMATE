@@ -79,7 +79,7 @@ export default async function SupplierInventoryPage({
     supabase
       .from("supplier_listings")
       .select(
-        "id,products(name),product_variants(name),supplier_branches(name),supplier_warehouses(name),product_media(storage_path,is_cover,sort_order)",
+        "id,price,stock_quantity,stock_status,inventory_mode,listing_status,is_active,branch_id,products(name),product_variants(name),supplier_branches(name),supplier_warehouses(name),product_media(storage_path,is_cover,sort_order)",
       )
       .eq("supplier_id", membership.organisationId)
       .order("created_at"),
@@ -171,6 +171,8 @@ export default async function SupplierInventoryPage({
                 .from("product-media")
                 .getPublicUrl(media.storage_path).data.publicUrl
             : null,
+          listingStatus: listing.listing_status,
+          marketplace: listing.listing_status !== "published" ? "Hidden — Draft" : listing.price == null ? "Hidden — Missing Price" : !listing.branch_id ? "Hidden — Missing Branch" : listing.inventory_mode === "confirmation_required" ? "Hidden — Add Stock" : listing.inventory_mode === "exact_quantity" && Number(listing.stock_quantity ?? 0) <= 0 ? "Hidden — Out of Stock" : listing.inventory_mode === "status_only" && listing.stock_status !== "in_stock" ? "Hidden — Out of Stock" : listing.is_active ? "Visible" : "Hidden — Inactive",
         },
       ] as const;
     }),
@@ -417,6 +419,7 @@ export default async function SupplierInventoryPage({
               <th>Selling price</th>
               <th>Stock value</th>
               <th>Status</th>
+              <th>Marketplace</th>
               <th>Last movement</th>
               <th>Actions</th>
             </tr>
@@ -453,12 +456,16 @@ export default async function SupplierInventoryPage({
                       : row.stock_status.replaceAll("_", " ")}
                   </span>
                 </td>
+                <td><span className={`text-xs font-bold ${listingLabels.get(row.listing_id)?.marketplace === "Visible" ? "text-emerald-700" : "text-amber-700"}`}>{listingLabels.get(row.listing_id)?.marketplace ?? "Hidden"}</span></td>
                 <td>
                   {row.last_movement_at
                     ? new Date(row.last_movement_at).toLocaleDateString("en-GH")
                     : "None"}
                 </td>
                 <td>
+                  <Link className="mb-2 inline-flex min-h-10 items-center rounded-xl bg-emerald-800 px-3 text-xs font-bold text-white hover:bg-emerald-900" href={`/supplier/inventory?receive=${row.listing_id}`}>
+                    {row.on_hand == null ? "Add Stock" : "Receive Stock"}
+                  </Link>
                   <details className="relative">
                     <summary className="cursor-pointer font-bold text-brand-700">
                       Actions
@@ -489,7 +496,7 @@ export default async function SupplierInventoryPage({
             ))}
             {!rows.length && (
               <tr>
-                <td colSpan={12} className="p-8 text-center text-slate-500">
+                <td colSpan={13} className="p-8 text-center text-slate-500">
                   No inventory matches these filters.
                 </td>
               </tr>

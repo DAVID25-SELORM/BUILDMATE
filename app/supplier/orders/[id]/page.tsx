@@ -2,36 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSupplierPermission } from "@/lib/organisations/access";
 import { customerOrderStatusLabel } from "@/lib/orders/customer";
+import { getSupplierOrderDetail } from "@/lib/supplier/order-detail";
 import {
   acknowledgeOrder,
   completePickup,
   progressOrder,
   rejectOrder,
 } from "../actions";
-
-type Item = {
-  id: string;
-  product_name_snapshot: string;
-  quantity: number;
-  unit: string;
-  unit_price: number;
-  line_total: number;
-  supplier_listings: {
-    inventory_mode: string;
-    stock_status: string;
-    inventory_balances: {
-      available_quantity: number;
-      quantity_reserved: number;
-    }[];
-  } | null;
-};
-type Event = {
-  id: string;
-  event_type: string;
-  note: string | null;
-  created_at: string;
-  profiles: { full_name: string | null } | null;
-};
 
 export default async function SupplierOrderDetail({
   params,
@@ -41,34 +18,15 @@ export default async function SupplierOrderDetail({
   const { id } = await params;
   const { supabase, membership } =
     await requireSupplierPermission("orders.view");
-  const [{ data: order, error }, { data: events, error: eventError }] =
-    await Promise.all([
-      supabase
-        .from("orders")
-        .select(
-          "id,order_number,status,total,created_at,delivery_address,fulfilment_method,payment_method,supplier_received_at,rejection_reason,customer:profiles!orders_customer_id_fkey(full_name,phone),order_items(id,product_name_snapshot,quantity,unit,unit_price,line_total,supplier_listings(inventory_mode,stock_status,inventory_balances(available_quantity,quantity_reserved))),order_cash_payments(recorded_at,reference)",
-        )
-        .eq("id", id)
-        .eq("supplier_id", membership.organisationId)
-        .maybeSingle(),
-      supabase
-        .from("order_events")
-        .select("id,event_type,note,created_at,profiles(full_name)")
-        .eq("order_id", id)
-        .order("created_at"),
-    ]);
-  if (error) throw new Error(`Unable to load supplier order: ${error.message}`);
-  if (eventError)
-    throw new Error(`Unable to load order timeline: ${eventError.message}`);
-  if (!order) notFound();
+  const detail = await getSupplierOrderDetail({ supabase, orderId: id, organisationId: membership.organisationId });
+  if (!detail) notFound();
+  const { order, items, events: history, payment, delivery } = detail;
   const customer = order.customer as unknown as {
     full_name: string | null;
     phone: string | null;
   } | null;
-  const items = order.order_items as unknown as Item[];
-  const history = (events ?? []) as unknown as Event[];
   const acknowledged = Boolean(order.supplier_received_at);
-  const paymentRecorded = Boolean(order.order_cash_payments?.length);
+  const paymentRecorded = Boolean(payment);
   const status =
     order.status === "awaiting_supplier_confirmation"
       ? acknowledged
@@ -100,8 +58,7 @@ export default async function SupplierOrderDetail({
             <h2 className="text-xl font-black">Items</h2>
             <div className="mt-3 divide-y">
               {items.map((item) => {
-                const listing = item.supplier_listings,
-                  balance = listing?.inventory_balances?.[0];
+                const listing = item.listing;
                 return (
                   <div
                     className="grid gap-2 py-4 sm:grid-cols-[1fr_auto]"
@@ -118,7 +75,7 @@ export default async function SupplierOrderDetail({
                           Availability:{" "}
                           {listing.inventory_mode === "confirmation_required"
                             ? "Supplier confirmation required"
-                            : `${balance?.available_quantity ?? 0} available · ${balance?.quantity_reserved ?? 0} reserved`}
+                            : `${listing.available ?? "Not configured"} available · ${listing.reserved ?? 0} reserved`}
                         </p>
                       )}
                     </div>
@@ -266,15 +223,17 @@ export default async function SupplierOrderDetail({
                   <b>{customerOrderStatusLabel(event.event_type)}</b>
                   <p className="text-xs text-slate-500">
                     {new Date(event.created_at).toLocaleString()}
-                    {event.profiles?.full_name
-                      ? ` · ${event.profiles.full_name}`
+                    {event.actor
+                      ? ` · ${event.actor}`
                       : ""}
                   </p>
                   {event.note && <p>{event.note}</p>}
                 </li>
               ))}
             </ol>
+            {!history.length && <p className="mt-3 text-sm text-slate-500">No timeline events have been recorded yet.</p>}
           </section>
+          {order.fulfilment_method === "delivery" && !delivery && <section className="card p-5 text-sm text-slate-500">No delivery has been scheduled yet.</section>}
         </aside>
       </div>
     </>

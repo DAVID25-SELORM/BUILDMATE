@@ -30,7 +30,7 @@ const gallery = [
 
 export default async function NanaAttakorahStorefront() {
   const supabase = await createClient();
-  const { data } = await supabase.from("supplier_listings").select("id,product_id,price,stock_status,inventory_mode,delivery_available,pickup_available,products!inner(name,base_unit,images,categories(name)),product_variants(name),supplier_branches(name,city),product_media(storage_path,alt_text,is_cover,sort_order)").eq("supplier_id","9b232d45-65f6-4f7d-83d5-d0907f98b4ff").eq("listing_status","published").eq("is_active",true).neq("stock_status","out_of_stock").order("price");
+  const { data } = await supabase.from("supplier_listings").select("id,product_id,price,stock_status,inventory_mode,delivery_available,pickup_available,products!inner(name,base_unit,images,categories(name)),product_variants(name),supplier_branches(name,city),product_media(storage_path,alt_text,is_cover,sort_order)").eq("supplier_id","9b232d45-65f6-4f7d-83d5-d0907f98b4ff").eq("listing_status","published").eq("is_active",true).not("branch_id","is",null).or("and(inventory_mode.eq.exact_quantity,stock_quantity.gt.0),and(inventory_mode.eq.status_only,stock_status.eq.in_stock)").order("price");
   const published = (data ?? []).map((row) => {
     const product = row.products as unknown as {name:string;base_unit:string;images:string[];categories:{name:string}|null};
     const variant = row.product_variants as unknown as {name:string}|null;
