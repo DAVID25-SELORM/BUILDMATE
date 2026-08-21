@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { SupplierPageHeader } from "@/components/supplier/SupplierPageHeader";
+import { StatusBadge } from "@/components/supplier/StatusBadge";
 import { QuoteResponseForm } from "@/components/supplier/quotes/QuoteResponseForm";
 import {
   acknowledgeOrder,
@@ -235,34 +237,34 @@ export function SupplierOrdersView({
   orders: SupplierOrderView[];
   readOnly?: boolean;
 }) {
+  const counts = {
+    new: orders.filter((order) => order.status === "awaiting_supplier_confirmation").length,
+    accepted: orders.filter((order) => order.status === "confirmed").length,
+    preparing: orders.filter((order) => order.status === "preparing").length,
+    ready: orders.filter((order) => order.status === "ready_for_dispatch").length,
+    delivery: orders.filter((order) => ["driver_assigned", "picked_up", "in_transit", "partially_delivered", "customer_confirmation_pending"].includes(order.status)).length,
+    completed: orders.filter((order) => order.status === "completed").length,
+    closed: orders.filter((order) => ["cancelled", "refunded"].includes(order.status)).length,
+  };
+  const tabs = [["New", "new", counts.new], ["Accepted", "accepted", counts.accepted], ["Preparing", "preparing", counts.preparing], ["Ready", "ready", counts.ready], ["In delivery", "delivery", counts.delivery], ["Completed", "completed", counts.completed], ["Rejected / Cancelled", "closed", counts.closed]] as const;
   return (
     <>
-      <h1 className="text-3xl font-black">Supplier orders</h1>
-      <p className="mt-2 text-slate-600">
-        Acknowledge new requests, then accept only what you can fulfil.
-      </p>
-      <div className="mt-5 flex flex-wrap gap-2 text-sm">
-        <a className="btn-secondary" href="#new">
-          New orders
-        </a>
-        <a className="btn-secondary" href="#active">
-          In progress
-        </a>
-        <a className="btn-secondary" href="#closed">
-          Completed / cancelled
-        </a>
+      <SupplierPageHeader title="Orders" description="Review new orders and move accepted orders through fulfilment." />
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2" aria-label="Order status summary">
+        {tabs.map(([label, value, count]) => <a key={value} href={`#${value}`} className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border px-3.5 text-sm font-semibold ${value === "new" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}><span>{label}</span><span className="rounded-full bg-white/80 px-2 py-0.5 text-xs">{count}</span></a>)}
       </div>
       <div className="mt-6 space-y-4">
         {orders.map((order) => {
           const action = nextOrder[order.status];
           const acknowledged = Boolean(order.supplier_received_at);
           const paymentRecorded = Boolean(order.order_cash_payments?.length);
-          const section =
-            order.status === "awaiting_supplier_confirmation"
-              ? "new"
-              : ["completed", "cancelled", "refunded"].includes(order.status)
-                ? "closed"
-                : "active";
+          const section = order.status === "awaiting_supplier_confirmation" ? "new"
+            : order.status === "confirmed" ? "accepted"
+            : order.status === "preparing" ? "preparing"
+            : order.status === "ready_for_dispatch" ? "ready"
+            : order.status === "completed" ? "completed"
+            : ["cancelled", "refunded"].includes(order.status) ? "closed"
+            : "delivery";
           const displayStatus =
             order.status === "awaiting_supplier_confirmation"
               ? acknowledged
@@ -276,12 +278,13 @@ export function SupplierOrdersView({
           return (
             <article
               id={section}
-              className={`card p-5 ${order.status === "awaiting_supplier_confirmation" ? "border-2 border-brand-500" : ""}`}
+              className={`scroll-mt-24 rounded-2xl border bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:shadow-md ${order.status === "awaiting_supplier_confirmation" ? "border-emerald-300" : "border-slate-200"}`}
               key={order.id}
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <b className="text-lg">{order.order_number}</b>
+                  <StatusBadge tone={order.status === "awaiting_supplier_confirmation" ? "success" : order.status === "cancelled" ? "danger" : "info"}>{displayStatus}</StatusBadge>
+                  <b className="mt-3 block text-lg font-extrabold text-slate-950">{order.order_number}</b>
                   <p className="text-sm font-semibold">
                     Customer: {order.customer?.full_name ?? "Customer"}
                   </p>
@@ -314,7 +317,7 @@ export function SupplierOrdersView({
                       {order.status === "awaiting_supplier_confirmation" &&
                         !acknowledged && (
                           <form action={acknowledgeOrder.bind(null, order.id)}>
-                            <button className="btn-secondary">
+                            <button className="btn-primary min-h-11 bg-emerald-800 px-4 py-2 text-sm hover:bg-emerald-900">
                               Acknowledge Order
                             </button>
                           </form>
@@ -597,7 +600,7 @@ export function SupplierSettlementsView({
 }) {
   return (
     <>
-      <h1 className="text-3xl font-black">Settlements</h1>
+      <SupplierPageHeader title="Settlements" description="Review available balances and supplier ledger activity." />
       <div className="card mt-6 p-6">
         <p className="text-sm text-slate-500">Available balance</p>
         <p className="text-3xl font-black">GHS {balance.toFixed(2)}</p>

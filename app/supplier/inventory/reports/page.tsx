@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { SupplierPageHeader } from "@/components/supplier/SupplierPageHeader";
 import { requireSupplierPermission } from "@/lib/organisations/access";
-import { supplierNavigation } from "@/lib/organisations/navigation";
 const reports = [
   "current_stock",
   "valuation",
@@ -58,22 +57,11 @@ export default async function InventoryReports({
   };
   const columns = Object.keys(result.rows[0] ?? {});
   return (
-    <DashboardShell
-      title="Supplier portal"
-      nav={await supplierNavigation(membership.organisationId)}
-    >
+    <>
       <Link href="/supplier/inventory" className="font-semibold text-brand-700">
         ← Inventory
       </Link>
-      <h1 className="mt-3 text-3xl font-black">
-        Inventory reports{singleBranch ? ` · ${singleBranch.name}` : ""}
-      </h1>
-      {singleBranch && (
-        <p className="mt-2 text-sm text-slate-600">
-          All inventory is currently held at {singleBranch.name}
-          {!warehouses?.length ? "; no warehouse filter is needed." : "."}
-        </p>
-      )}
+      <div className="mt-3"><SupplierPageHeader title={`Inventory reports${singleBranch ? ` · ${singleBranch.name}` : ""}`} description={singleBranch ? `All inventory is currently held at ${singleBranch.name}${!warehouses?.length ? "; no warehouse filter is needed." : "."}` : "Analyse stock, movements, valuation and sales performance."} /></div>
       <form className="card mt-5 grid gap-3 p-4 md:grid-cols-4">
         <label>
           <span className="label">Report</span>
@@ -157,6 +145,6 @@ export default async function InventoryReports({
           </tbody>
         </table>
       </section>
-    </DashboardShell>
+    </>
   );
 }

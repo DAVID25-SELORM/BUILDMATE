@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { InventoryOperationForms } from "@/components/supplier/inventory/InventoryOperationForms";
 import { ReturnProcessing } from "@/components/supplier/inventory/ReturnProcessing";
+import { SupplierPageHeader } from "@/components/supplier/SupplierPageHeader";
 import { requireSupplierPermission } from "@/lib/organisations/access";
-import { supplierNavigation } from "@/lib/organisations/navigation";
 
 type Row = {
   listing_id: string;
@@ -220,18 +219,10 @@ export default async function SupplierInventoryPage({
     .slice(0, 5);
 
   return (
-    <DashboardShell
-      title="Supplier portal"
-      nav={await supplierNavigation(membership.organisationId)}
-    >
-      <h1 className="text-3xl font-black">
-        Inventory{singleBranch ? ` · ${singleBranch.name}` : ""}
-      </h1>
-      <p className="mt-2 text-slate-600">
-        {singleBranch
+    <>
+      <SupplierPageHeader title={`Inventory${singleBranch ? ` · ${singleBranch.name}` : ""}`} description={singleBranch
           ? `All inventory is currently held at ${singleBranch.name}. Track stock, valuation and movements from one workspace.`
-          : "Track stock, valuation and movements across your branches."}
-      </p>
+          : "Track stock, valuation and movements across your branches."} />
       {!branches?.length && (
         <div className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
           Inventory operations need a branch.{" "}
@@ -572,7 +563,7 @@ export default async function SupplierInventoryPage({
         </section>
       </div>
       <ReturnProcessing items={(returns ?? []) as never[]} />
-    </DashboardShell>
+    </>
   );
 }
 

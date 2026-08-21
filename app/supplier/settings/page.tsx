@@ -1,2 +1,8 @@
-import{DashboardShell}from"@/components/dashboard/DashboardShell";import{TenantDataControls}from"@/components/organisations/TenantDataControls";import{requireSupplierPermission}from"@/lib/organisations/access";import{supplierNavigation}from"@/lib/organisations/navigation";
-export default async function SupplierSettings(){const{membership}=await requireSupplierPermission("supplier.profile.edit");return <DashboardShell title="Supplier portal" nav={await supplierNavigation(membership.organisationId)}><h1 className="text-3xl font-black">Organisation settings</h1><p className="mt-2 text-slate-600">Manage data rights for {membership.organisation.name}.</p><TenantDataControls organisationId={membership.organisationId}/></DashboardShell>}
+import { TenantDataControls } from "@/components/organisations/TenantDataControls";
+import { SupplierPageHeader } from "@/components/supplier/SupplierPageHeader";
+import { requireSupplierPermission } from "@/lib/organisations/access";
+
+export default async function SupplierSettings() {
+  const { membership } = await requireSupplierPermission("supplier.profile.edit");
+  return <><SupplierPageHeader title="Organisation settings" description={`Manage data rights for ${membership.organisation.name}.`} /><TenantDataControls organisationId={membership.organisationId} /></>;
+}

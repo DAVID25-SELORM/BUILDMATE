@@ -1,10 +1,8 @@
-import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import {
   SupplierOrdersView,
   type SupplierOrderView,
 } from "@/components/dashboard/PortalSectionViews";
 import { requireSupplierPermission } from "@/lib/organisations/access";
-import { supplierNavigation } from "@/lib/organisations/navigation";
 import { confirmReturnToOrigin, recordCashPayment } from "./actions";
 
 export default async function SupplierOrders() {
@@ -33,10 +31,7 @@ export default async function SupplierOrders() {
       !order.order_cash_payments?.length,
   );
   return (
-    <DashboardShell
-      title="Supplier portal"
-      nav={await supplierNavigation(membership.organisationId)}
-    >
+    <>
       <SupplierOrdersView orders={orders} />
       {awaitingCash.length > 0 && (
         <section className="card mt-6 p-5">
@@ -98,6 +93,6 @@ export default async function SupplierOrders() {
           </div>
         </section>
       )}
-    </DashboardShell>
+    </>
   );
 }

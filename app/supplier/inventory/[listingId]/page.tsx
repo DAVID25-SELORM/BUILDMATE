@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { requireSupplierPermission } from "@/lib/organisations/access";
-import { supplierNavigation } from "@/lib/organisations/navigation";
 
 type Movement = {
   id: string;
@@ -120,10 +118,7 @@ export default async function InventoryDetail({
     ["Potential gross margin", money(current.potential_margin)],
   ];
   return (
-    <DashboardShell
-      title="Supplier portal"
-      nav={await supplierNavigation(membership.organisationId)}
-    >
+    <>
       <Link className="font-semibold text-brand-700" href="/supplier/inventory">
         ← Inventory
       </Link>
@@ -277,6 +272,6 @@ export default async function InventoryDetail({
           )}
         </div>
       </section>
-    </DashboardShell>
+    </>
   );
 }

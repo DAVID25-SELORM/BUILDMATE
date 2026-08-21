@@ -1,15 +1,14 @@
 import { redirect } from "next/navigation";
 import { ProductMediaManager } from "@/components/commerce/ProductMediaManager";
 import { CataloguePicker } from "@/components/supplier/products/CataloguePicker";
-import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { ListingForm } from "@/components/supplier/products/ListingForm";
 import {
   SupplierInventoryEditor,
   type InventoryListing,
 } from "@/components/supplier/products/SupplierInventoryEditor";
 import { ClarificationQueue } from "@/components/supplier/products/ClarificationQueue";
+import { SupplierPageHeader } from "@/components/supplier/SupplierPageHeader";
 import { requireSupplierPermission } from "@/lib/organisations/access";
-import { supplierNavigation } from "@/lib/organisations/navigation";
 
 type ListingRow = {
   id: string;
@@ -128,16 +127,9 @@ export default async function SupplierProductsPage() {
     organisation?.verification_status === "approved" &&
     organisation?.product_publishing_enabled === true;
   return (
-    <DashboardShell
-      title="Supplier portal"
-      nav={await supplierNavigation(membership.organisationId)}
-    >
+    <>
       <div>
-        <h1 className="text-3xl font-black">Products and inventory</h1>
-        <p className="mt-2 text-slate-600">
-          Complete prices and stock, assign fulfilment, then publish verified
-          offers.
-        </p>
+        <SupplierPageHeader title="Products" description="Complete prices and stock, assign fulfilment, then publish verified offers." />
         {branches?.length === 1 && (
           <p className="mt-2 text-sm font-semibold text-brand-800">
             Location: {branches[0].name}
@@ -220,6 +212,6 @@ export default async function SupplierProductsPage() {
         </details>
       )}
       {canEdit === true && <ProductMediaManager listings={mediaListings} />}
-    </DashboardShell>
+    </>
   );
 }

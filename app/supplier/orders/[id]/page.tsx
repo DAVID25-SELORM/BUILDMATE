@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { requireSupplierPermission } from "@/lib/organisations/access";
-import { supplierNavigation } from "@/lib/organisations/navigation";
 import { customerOrderStatusLabel } from "@/lib/orders/customer";
 import {
   acknowledgeOrder,
@@ -82,10 +80,7 @@ export default async function SupplierOrderDetail({
           : "Ready for Dispatch"
         : customerOrderStatusLabel(order.status);
   return (
-    <DashboardShell
-      title="Supplier portal"
-      nav={await supplierNavigation(membership.organisationId)}
-    >
+    <>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Link
@@ -282,6 +277,6 @@ export default async function SupplierOrderDetail({
           </section>
         </aside>
       </div>
-    </DashboardShell>
+    </>
   );
 }
