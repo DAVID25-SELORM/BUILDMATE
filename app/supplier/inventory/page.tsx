@@ -3,6 +3,7 @@ import { InventoryOperationForms } from "@/components/supplier/inventory/Invento
 import { ReturnProcessing } from "@/components/supplier/inventory/ReturnProcessing";
 import { SupplierPageHeader } from "@/components/supplier/SupplierPageHeader";
 import { requireSupplierPermission } from "@/lib/organisations/access";
+import { assignUnassignedListings } from "@/app/supplier/inventory/actions";
 
 type Row = {
   listing_id: string;
@@ -90,6 +91,7 @@ export default async function SupplierInventoryPage({
       .from("supplier_branches")
       .select("id,name,is_main_branch")
       .eq("organisation_id", membership.organisationId)
+      .eq("is_active", true)
       .order("is_main_branch", { ascending: false }),
     supabase
       .from("supplier_warehouses")
@@ -172,7 +174,24 @@ export default async function SupplierInventoryPage({
                 .getPublicUrl(media.storage_path).data.publicUrl
             : null,
           listingStatus: listing.listing_status,
-          marketplace: listing.listing_status !== "published" ? "Hidden — Draft" : listing.price == null ? "Hidden — Missing Price" : !listing.branch_id ? "Hidden — Missing Branch" : listing.inventory_mode === "confirmation_required" ? "Hidden — Add Stock" : listing.inventory_mode === "exact_quantity" && Number(listing.stock_quantity ?? 0) <= 0 ? "Hidden — Out of Stock" : listing.inventory_mode === "status_only" && listing.stock_status !== "in_stock" ? "Hidden — Out of Stock" : listing.is_active ? "Visible" : "Hidden — Inactive",
+          marketplace:
+            listing.listing_status !== "published"
+              ? "Hidden — Draft"
+              : listing.price == null
+                ? "Hidden — Missing Price"
+                : !listing.branch_id
+                  ? "Hidden — Missing Branch"
+                  : listing.inventory_mode === "confirmation_required"
+                    ? "Hidden — Add Stock"
+                    : listing.inventory_mode === "exact_quantity" &&
+                        Number(listing.stock_quantity ?? 0) <= 0
+                      ? "Hidden — Out of Stock"
+                      : listing.inventory_mode === "status_only" &&
+                          listing.stock_status !== "in_stock"
+                        ? "Hidden — Out of Stock"
+                        : listing.is_active
+                          ? "Visible"
+                          : "Hidden — Inactive",
         },
       ] as const;
     }),
@@ -211,7 +230,7 @@ export default async function SupplierInventoryPage({
     ["Reserved", hasTrackedInventory ? s.reserved : "Not tracked"],
     ["Low stock", s.low_stock],
     ["Out of stock", s.out_of_stock],
-    ["Needs confirmation", s.confirmation_required],
+    ["Needs stock setup", s.confirmation_required],
   ];
   const recent = dashboard.rows
     .filter((row) => row.last_movement_at)
@@ -222,9 +241,14 @@ export default async function SupplierInventoryPage({
 
   return (
     <>
-      <SupplierPageHeader title={`Inventory${singleBranch ? ` · ${singleBranch.name}` : ""}`} description={singleBranch
-          ? `All inventory is currently held at ${singleBranch.name}. Track stock, valuation and movements from one workspace.`
-          : "Track stock, valuation and movements across your branches."} />
+      <SupplierPageHeader
+        title={`Inventory${singleBranch ? ` · ${singleBranch.name}` : ""}`}
+        description={
+          singleBranch
+            ? `All inventory is currently held at ${singleBranch.name}. Track stock, valuation and movements from one workspace.`
+            : "Track stock, valuation and movements across your branches."
+        }
+      />
       {!branches?.length && (
         <div className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
           Inventory operations need a branch.{" "}
@@ -241,7 +265,7 @@ export default async function SupplierInventoryPage({
               ? "low_stock"
               : label === "Out of stock"
                 ? "out_of_stock"
-                : label === "Needs confirmation"
+                : label === "Needs stock setup"
                   ? "confirmation_required"
                   : null;
           const body = (
@@ -255,7 +279,7 @@ export default async function SupplierInventoryPage({
           return filter ? (
             <Link
               className="card p-4 transition hover:border-brand-300 hover:shadow-md"
-              href={`/supplier/inventory?${label === "Needs confirmation" ? "mode" : "status"}=${filter}`}
+              href={`/supplier/inventory?${label === "Needs stock setup" ? "mode" : "status"}=${filter}`}
               key={label}
             >
               {body}
@@ -267,6 +291,89 @@ export default async function SupplierInventoryPage({
           );
         })}
       </div>
+      <div className="mt-5 flex flex-wrap gap-3">
+        <Link className="btn-primary" href="/supplier/products#add-product">
+          + Add Product
+        </Link>
+        <Link
+          className="btn-secondary"
+          href="/supplier/inventory?operation=receive"
+        >
+          Receive Stock
+        </Link>
+        <Link
+          className="btn-secondary"
+          href="/supplier/inventory?operation=adjust"
+        >
+          Adjust
+        </Link>
+        <Link
+          className="btn-secondary"
+          href="/supplier/inventory?operation=count"
+        >
+          Count
+        </Link>
+        <Link
+          className="btn-secondary"
+          href="/supplier/inventory?operation=transfer"
+        >
+          Transfer
+        </Link>
+      </div>
+      {(listings ?? []).some((listing) => !listing.branch_id) && (
+        <form action={assignUnassignedListings} className="card mt-5 p-5">
+          <h2 className="text-lg font-bold">
+            Products needing branch assignment
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Assigning a branch changes location only. It does not create or
+            change stock quantities.
+          </p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {(listings ?? [])
+              .filter((listing) => !listing.branch_id)
+              .map((listing) => {
+                const product = listing.products as unknown as {
+                  name: string;
+                } | null;
+                return (
+                  <label
+                    className="rounded-xl border p-3 text-sm"
+                    key={listing.id}
+                  >
+                    <input
+                      className="mr-2"
+                      type="checkbox"
+                      name="listingIds"
+                      value={listing.id}
+                    />
+                    {product?.name ?? "Product"}
+                  </label>
+                );
+              })}
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-[1fr_220px_auto]">
+            <select className="input" name="branchId" required>
+              <option value="">Choose destination branch</option>
+              {branches?.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </option>
+              ))}
+            </select>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="confirmation"
+                value="assign"
+                required
+              />{" "}
+              Confirm branch assignment
+            </label>
+            <button className="btn-primary">Assign selected</button>
+          </div>
+        </form>
+      )}
       <InventoryOperationForms
         listings={options}
         canReceive={receive === true}
@@ -277,9 +384,15 @@ export default async function SupplierInventoryPage({
         branchCount={branches?.length ?? 0}
         warehouseCount={warehouses?.length ?? 0}
         setupProgress={
-          ((setupProgress as {
-            items?: { listing_id: string; status: string; updated_at: string }[];
-          } | null)?.items ?? [])
+          (
+            setupProgress as {
+              items?: {
+                listing_id: string;
+                status: string;
+                updated_at: string;
+              }[];
+            } | null
+          )?.items ?? []
         }
         setupLastSavedAt={
           (setupProgress as { last_saved_at?: string | null } | null)
@@ -319,7 +432,7 @@ export default async function SupplierInventoryPage({
           className="rounded-full bg-amber-100 px-4 py-2 text-amber-950"
           href="/supplier/inventory?mode=confirmation_required"
         >
-          Needs Confirmation
+          Needs Stock Setup
         </Link>
       </div>
       <form className="card mt-6 grid gap-3 p-4 md:grid-cols-4 xl:grid-cols-6">
@@ -452,18 +565,27 @@ export default async function SupplierInventoryPage({
                     className={`rounded-full px-2 py-1 text-xs font-bold ${row.inventory_mode === "confirmation_required" ? "bg-amber-100 text-amber-900" : row.stock_status === "out_of_stock" ? "bg-red-100 text-red-800" : "bg-emerald-100 text-emerald-800"}`}
                   >
                     {row.inventory_mode === "confirmation_required"
-                      ? "Needs confirmation"
+                      ? "Needs stock setup"
                       : row.stock_status.replaceAll("_", " ")}
                   </span>
                 </td>
-                <td><span className={`text-xs font-bold ${listingLabels.get(row.listing_id)?.marketplace === "Visible" ? "text-emerald-700" : "text-amber-700"}`}>{listingLabels.get(row.listing_id)?.marketplace ?? "Hidden"}</span></td>
+                <td>
+                  <span
+                    className={`text-xs font-bold ${listingLabels.get(row.listing_id)?.marketplace === "Visible" ? "text-emerald-700" : "text-amber-700"}`}
+                  >
+                    {listingLabels.get(row.listing_id)?.marketplace ?? "Hidden"}
+                  </span>
+                </td>
                 <td>
                   {row.last_movement_at
                     ? new Date(row.last_movement_at).toLocaleDateString("en-GH")
                     : "None"}
                 </td>
                 <td>
-                  <Link className="mb-2 inline-flex min-h-10 items-center rounded-xl bg-emerald-800 px-3 text-xs font-bold text-white hover:bg-emerald-900" href={`/supplier/inventory?receive=${row.listing_id}`}>
+                  <Link
+                    className="mb-2 inline-flex min-h-10 items-center rounded-xl bg-emerald-800 px-3 text-xs font-bold text-white hover:bg-emerald-900"
+                    href={`/supplier/inventory?receive=${row.listing_id}`}
+                  >
                     {row.on_hand == null ? "Add Stock" : "Receive Stock"}
                   </Link>
                   <details className="relative">

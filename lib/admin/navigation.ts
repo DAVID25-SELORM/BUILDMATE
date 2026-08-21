@@ -25,6 +25,7 @@ export const ADMIN_NAV = [
   { label: "Quotations", href: "/admin/quotations" },
   { label: "Orders", href: "/admin/orders" },
   { label: "Deliveries", href: "/admin/deliveries" },
+  { label: "Service Providers", href: "/admin/service-providers" },
   { label: "Payments", href: "/admin/payments" },
   { label: "Settlements", href: "/admin/settlements" },
   { label: "Disputes", href: "/admin/disputes" },

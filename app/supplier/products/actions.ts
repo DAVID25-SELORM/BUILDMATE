@@ -12,7 +12,8 @@ async function resolveBranch(
   const { data: branches, error } = await supabase
     .from("supplier_branches")
     .select("id")
-    .eq("organisation_id", organisationId);
+    .eq("organisation_id", organisationId)
+    .eq("is_active", true);
   if (error) return { error: error.message, branchId: null };
   if (!branches?.length)
     return {
@@ -450,22 +451,13 @@ export async function createListingDrafts(formData: FormData) {
     )
       return { error: "Choose a warehouse at the selected branch" };
   }
-  const { data, error } = await supabase.rpc("create_supplier_listing_drafts", {
+  const { data, error } = await supabase.rpc("create_supplier_listing_drafts_at_location", {
     target_supplier: membership.organisationId,
     target_product_ids: productIds,
+    target_branch: location.branchId,
+    target_warehouse: warehouseId,
   });
   if (error) return { error: error.message };
-  const { error: locationError } = await supabase
-    .from("supplier_listings")
-    .update({
-      branch_id: location.branchId,
-      warehouse_id: warehouseId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("supplier_id", membership.organisationId)
-    .in("product_id", productIds)
-    .is("branch_id", null);
-  if (locationError) return { error: locationError.message };
   revalidatePath("/supplier/products");
   return { success: true, count: Number(data ?? 0) };
 }

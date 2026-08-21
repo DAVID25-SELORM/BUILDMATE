@@ -1,3 +1,386 @@
 "use client";
-import Image from"next/image";import Link from"next/link";import{Minus,Plus,ShieldCheck,Truck,Warehouse}from"lucide-react";import{useEffect,useMemo,useState}from"react";import{useRouter}from"next/navigation";import type{CartItem}from"@/lib/cart/cart";import{cartTotal,normalizeQuantity,readCart,writeCart}from"@/lib/cart/cart";
-export default function CartPage(){const router=useRouter();const[items,setItems]=useState<CartItem[]>([]),[fulfilment,setFulfilment]=useState<"delivery"|"pickup">("delivery"),[region,setRegion]=useState(""),[city,setCity]=useState(""),[area,setArea]=useState(""),[gps,setGps]=useState(""),[landmark,setLandmark]=useState(""),[phone,setPhone]=useState(""),[error,setError]=useState<string|null>(null),[pending,setPending]=useState(false);useEffect(()=>{const timer=setTimeout(()=>setItems(readCart()),0);return()=>clearTimeout(timer)},[]);function save(next:CartItem[]){setItems(next);writeCart(next)}const groups=useMemo(()=>Object.values(items.reduce<Record<string,{supplier:string;items:CartItem[]}>>((result,item)=>{const key=item.supplierId??item.supplier;(result[key]??={supplier:item.supplier,items:[]}).items.push(item);return result},{})),[items]);const deliveryAllowed=items.every(item=>item.deliveryAvailable!==false),pickupAllowed=items.every(item=>item.pickupAvailable!==false);async function placeOrder(){setPending(true);setError(null);const address=[region,city,area,gps,landmark,phone].filter(Boolean).join(" · ");const response=await fetch("/api/cart/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({items,fulfilment,address})});const result=await response.json();if(!response.ok){if(response.status===409&&Array.isArray(result.priceChanges)){const changes=new Map<string,number>(result.priceChanges.map((change:{listingId:string;newPrice:number})=>[change.listingId,change.newPrice]));save(items.map(item=>changes.has(item.listingId)?{...item,price:changes.get(item.listingId)!}:item))}setError(result.error);setPending(false);if(response.status===401)router.push("/login?redirect=/cart");return}save([]);router.push(`/dashboard/orders/${result.orders[0]}?submitted=1`)}function quantity(item:CartItem,value:number){save(items.map(line=>line.listingId===item.listingId?{...line,quantity:normalizeQuantity(value)}:line))}return <section className="container-shell py-8 sm:py-12"><h1 className="text-3xl font-black sm:text-4xl">Your Cart</h1><p className="mt-2 text-slate-600">Review your materials before placing your order.</p>{groups.length>1&&<p className="mt-5 rounded-xl bg-blue-50 p-4 text-sm font-semibold text-blue-900">Your cart contains items from {groups.length} suppliers. Each supplier will confirm its portion and collect payment separately.</p>}<div className="mt-7 grid gap-7 lg:grid-cols-[1fr_380px]"><div className="space-y-6">{groups.map(group=><section className="card overflow-hidden" key={group.supplier}><div className="border-b bg-slate-50 px-5 py-4"><h2 className="text-lg font-black">{group.supplier}</h2><p className="text-sm text-slate-600">{group.items.length} item{group.items.length===1?"":"s"}</p></div><div className="divide-y">{group.items.map(item=><article className="grid gap-4 p-5 sm:grid-cols-[96px_1fr]" key={item.listingId}>{item.imageUrl?<div className="relative h-24 overflow-hidden rounded-xl bg-slate-100"><Image src={item.imageUrl} alt={item.name} fill sizes="96px" className="object-cover"/></div>:<div className="h-24 rounded-xl bg-slate-100"/>}<div><div className="flex justify-between gap-3"><div><h3 className="font-black">{item.name}</h3>{item.variant&&<p className="text-sm text-slate-600">{item.variant}</p>}<p className="mt-1 text-sm text-slate-600">{item.location??item.supplier}</p></div><b className="shrink-0">GHS {(item.price*item.quantity).toFixed(2)}</b></div><p className="mt-2 text-sm">GHS {item.price.toFixed(2)} / {item.unit}</p>{item.availabilityLabel&&<p className="mt-2 text-sm font-semibold text-amber-800">{item.availabilityLabel}</p>}<p className="mt-1 text-xs text-slate-500">{[item.deliveryAvailable&&"Delivery",item.pickupAvailable&&"Pickup"].filter(Boolean).join(" · ")}</p><div className="mt-4 flex items-center justify-between"><div className="inline-flex items-center rounded-xl border"><button type="button" className="p-3" aria-label={`Decrease ${item.name} quantity`} onClick={()=>quantity(item,item.quantity-1)}><Minus className="h-4 w-4"/></button><span className="min-w-10 text-center font-bold">{item.quantity}</span><button type="button" className="p-3" aria-label={`Increase ${item.name} quantity`} onClick={()=>quantity(item,item.quantity+1)}><Plus className="h-4 w-4"/></button></div><button type="button" className="text-sm font-semibold text-red-700" onClick={()=>save(items.filter(line=>line.listingId!==item.listingId))}>Remove</button></div></div></article>)}</div></section>)}{!items.length&&<div className="card p-10 text-center text-slate-600">Your cart is empty. <Link className="font-bold text-brand-700" href="/shop">Start shopping</Link></div>}</div><aside className="card h-fit p-5 lg:sticky lg:top-24"><h2 className="text-xl font-black">Fulfilment</h2><div className="mt-4 grid gap-3"><button type="button" disabled={!deliveryAllowed} onClick={()=>setFulfilment("delivery")} className={`flex items-center gap-3 rounded-xl border p-4 text-left ${fulfilment==="delivery"?"border-brand-600 bg-brand-50":""}`}><Truck/><span><b className="block">Delivery to my location</b><small>Cash on Delivery</small></span></button><button type="button" disabled={!pickupAllowed} onClick={()=>setFulfilment("pickup")} className={`flex items-center gap-3 rounded-xl border p-4 text-left ${fulfilment==="pickup"?"border-brand-600 bg-brand-50":""}`}><Warehouse/><span><b className="block">Pick up from supplier</b><small>Cash on Pickup</small></span></button></div>{fulfilment==="delivery"&&<fieldset className="mt-5 grid gap-3"><legend className="font-bold">Delivery address</legend><div className="grid grid-cols-2 gap-3"><input className="input" placeholder="Region" aria-label="Region" value={region} onChange={e=>setRegion(e.target.value)} required/><input className="input" placeholder="City / Town" aria-label="City or Town" value={city} onChange={e=>setCity(e.target.value)} required/></div><input className="input" placeholder="Area" aria-label="Area" value={area} onChange={e=>setArea(e.target.value)}/><input className="input" placeholder="GhanaPost GPS" aria-label="GhanaPost GPS" value={gps} onChange={e=>setGps(e.target.value)}/><input className="input" placeholder="Address / landmark" aria-label="Address or landmark" value={landmark} onChange={e=>setLandmark(e.target.value)}/><input className="input" type="tel" placeholder="Contact phone" aria-label="Contact phone" value={phone} onChange={e=>setPhone(e.target.value)}/></fieldset>}<div className="mt-6 space-y-2 border-t pt-5"><div className="flex justify-between"><span>Subtotal</span><b>GHS {cartTotal(items).toFixed(2)}</b></div><div className="flex justify-between text-sm text-slate-600"><span>Delivery</span><span>{fulfilment==="pickup"?"Pickup selected":"Calculated after confirmation"}</span></div><div className="flex justify-between text-xl font-black"><span>Estimated total</span><span>GHS {cartTotal(items).toFixed(2)}</span></div></div><div className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4"><p className="flex gap-2 font-black text-amber-950"><ShieldCheck className="h-5 w-5 shrink-0"/>Pay only when you receive and verify your materials.</p><p className="mt-2 text-xs text-amber-900">Never send money to a personal account or unverified number claiming to represent BuildMate. If anyone requests advance payment outside BuildMate, contact Support.</p></div>{items.some(item=>item.inventoryMode==="confirmation_required")&&<p className="mt-4 text-sm font-semibold text-amber-800">This supplier must confirm availability before the order is accepted.</p>}{error&&<p className="mt-4 text-sm font-semibold text-red-700" role="alert">{error}</p>}<button className="btn-primary mt-5 w-full py-3 text-base" disabled={pending||!items.length||!deliveryAllowed&&fulfilment==="delivery"||!pickupAllowed&&fulfilment==="pickup"} onClick={placeOrder}>{pending?"Submitting order…":"Place Order"}</button><p className="mt-3 text-center text-xs text-slate-600">You will not be charged online. By placing this order, payment is due only when you receive or collect and verify the materials.</p></aside></div></section>}
+import Image from "next/image";
+import Link from "next/link";
+import { Minus, Plus, ShieldCheck, Truck, Warehouse } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { CartItem } from "@/lib/cart/cart";
+import {
+  cartTotal,
+  normalizeQuantity,
+  readCart,
+  writeCart,
+} from "@/lib/cart/cart";
+export default function CartPage() {
+  const router = useRouter();
+  const [items, setItems] = useState<CartItem[]>([]),
+    [fulfilment, setFulfilment] = useState<"delivery" | "pickup">("delivery"),
+    [region, setRegion] = useState(""),
+    [city, setCity] = useState(""),
+    [area, setArea] = useState(""),
+    [gps, setGps] = useState(""),
+    [landmark, setLandmark] = useState(""),
+    [phone, setPhone] = useState(""),
+    [error, setError] = useState<string | null>(null),
+    [pending, setPending] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setItems(readCart()), 0);
+    return () => clearTimeout(timer);
+  }, []);
+  function save(next: CartItem[]) {
+    setItems(next);
+    writeCart(next);
+  }
+  const groups = useMemo(
+    () =>
+      Object.values(
+        items.reduce<Record<string, { supplier: string; items: CartItem[] }>>(
+          (result, item) => {
+            const key = item.supplierId ?? item.supplier;
+            (result[key] ??= { supplier: item.supplier, items: [] }).items.push(
+              item,
+            );
+            return result;
+          },
+          {},
+        ),
+      ),
+    [items],
+  );
+  const deliveryAllowed = items.every(
+      (item) => item.deliveryAvailable !== false,
+    ),
+    pickupAllowed = items.every((item) => item.pickupAvailable !== false);
+  async function placeOrder() {
+    setPending(true);
+    setError(null);
+    const address = [region, city, area, gps, landmark, phone]
+      .filter(Boolean)
+      .join(" · ");
+    const response = await fetch("/api/cart/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items, fulfilment, address }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      if (response.status === 409 && Array.isArray(result.priceChanges)) {
+        const changes = new Map<string, number>(
+          result.priceChanges.map(
+            (change: { listingId: string; newPrice: number }) => [
+              change.listingId,
+              change.newPrice,
+            ],
+          ),
+        );
+        save(
+          items.map((item) =>
+            changes.has(item.listingId)
+              ? { ...item, price: changes.get(item.listingId)! }
+              : item,
+          ),
+        );
+      }
+      setError(result.error);
+      setPending(false);
+      if (response.status === 401) router.push("/login?redirect=/cart");
+      return;
+    }
+    save([]);
+    router.push(`/dashboard/orders/${result.orders[0]}?submitted=1`);
+  }
+  function quantity(item: CartItem, value: number) {
+    save(
+      items.map((line) =>
+        line.listingId === item.listingId
+          ? { ...line, quantity: normalizeQuantity(value) }
+          : line,
+      ),
+    );
+  }
+  return (
+    <section className="container-shell py-8 sm:py-12">
+      <h1 className="text-3xl font-black sm:text-4xl">Your Cart</h1>
+      <p className="mt-2 text-slate-600">
+        Review your materials before placing your order.
+      </p>
+      {groups.length > 1 && (
+        <p className="mt-5 rounded-xl bg-blue-50 p-4 text-sm font-semibold text-blue-900">
+          Your cart contains items from {groups.length} suppliers. Each supplier
+          will confirm its portion and collect payment separately.
+        </p>
+      )}
+      <div className="mt-7 grid gap-7 lg:grid-cols-[1fr_380px]">
+        <div className="space-y-6">
+          {groups.map((group) => (
+            <section className="card overflow-hidden" key={group.supplier}>
+              <div className="border-b bg-slate-50 px-5 py-4">
+                <h2 className="text-lg font-black">{group.supplier}</h2>
+                <p className="text-sm text-slate-600">
+                  {group.items.length} item{group.items.length === 1 ? "" : "s"}
+                </p>
+              </div>
+              <div className="divide-y">
+                {group.items.map((item) => (
+                  <article
+                    className="grid gap-4 p-5 sm:grid-cols-[96px_1fr]"
+                    key={item.listingId}
+                  >
+                    {item.imageUrl ? (
+                      <div className="relative h-24 overflow-hidden rounded-xl bg-slate-100">
+                        <Image
+                          src={item.imageUrl}
+                          alt={item.name}
+                          fill
+                          sizes="96px"
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-24 rounded-xl bg-slate-100" />
+                    )}
+                    <div>
+                      <div className="flex justify-between gap-3">
+                        <div>
+                          <h3 className="font-black">{item.name}</h3>
+                          {item.variant && (
+                            <p className="text-sm text-slate-600">
+                              {item.variant}
+                            </p>
+                          )}
+                          <p className="mt-1 text-sm text-slate-600">
+                            {item.location ?? item.supplier}
+                          </p>
+                        </div>
+                        <b className="shrink-0">
+                          GHS {(item.price * item.quantity).toFixed(2)}
+                        </b>
+                      </div>
+                      <p className="mt-2 text-sm">
+                        GHS {item.price.toFixed(2)} / {item.unit}
+                      </p>
+                      {item.availabilityLabel && (
+                        <p className="mt-2 text-sm font-semibold text-amber-800">
+                          {item.availabilityLabel}
+                        </p>
+                      )}
+                      <p className="mt-1 text-xs text-slate-500">
+                        {[
+                          item.deliveryAvailable && "Delivery",
+                          item.pickupAvailable && "Pickup",
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="inline-flex items-center rounded-xl border">
+                          <button
+                            type="button"
+                            className="p-3"
+                            aria-label={`Decrease ${item.name} quantity`}
+                            onClick={() => quantity(item, item.quantity - 1)}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <span className="min-w-10 text-center font-bold">
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            className="p-3"
+                            aria-label={`Increase ${item.name} quantity`}
+                            onClick={() => quantity(item, item.quantity + 1)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          className="text-sm font-semibold text-red-700"
+                          onClick={() =>
+                            save(
+                              items.filter(
+                                (line) => line.listingId !== item.listingId,
+                              ),
+                            )
+                          }
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ))}
+          {!items.length && (
+            <div className="card p-10 text-center text-slate-600">
+              Your cart is empty.{" "}
+              <Link className="font-bold text-brand-700" href="/shop">
+                Start shopping
+              </Link>
+            </div>
+          )}
+        </div>
+        <aside className="card h-fit p-5 lg:sticky lg:top-24">
+          <h2 className="text-xl font-black">Fulfilment</h2>
+          <div className="mt-4 grid gap-3">
+            <button
+              type="button"
+              disabled={!deliveryAllowed}
+              onClick={() => setFulfilment("delivery")}
+              className={`flex items-center gap-3 rounded-xl border p-4 text-left ${fulfilment === "delivery" ? "border-brand-600 bg-brand-50" : ""}`}
+            >
+              <Truck />
+              <span>
+                <b className="block">Delivery to my location</b>
+                <small>Cash on Delivery</small>
+              </span>
+            </button>
+            <button
+              type="button"
+              disabled={!pickupAllowed}
+              onClick={() => setFulfilment("pickup")}
+              className={`flex items-center gap-3 rounded-xl border p-4 text-left ${fulfilment === "pickup" ? "border-brand-600 bg-brand-50" : ""}`}
+            >
+              <Warehouse />
+              <span>
+                <b className="block">Pick up from supplier</b>
+                <small>Cash on Pickup</small>
+              </span>
+            </button>
+          </div>
+          {fulfilment === "delivery" && (
+            <fieldset className="mt-5 grid gap-3">
+              <legend className="font-bold">Delivery address</legend>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  className="input"
+                  placeholder="Region"
+                  aria-label="Region"
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  required
+                />
+                <input
+                  className="input"
+                  placeholder="City / Town"
+                  aria-label="City or Town"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  required
+                />
+              </div>
+              <input
+                className="input"
+                placeholder="Area"
+                aria-label="Area"
+                value={area}
+                onChange={(e) => setArea(e.target.value)}
+              />
+              <input
+                className="input"
+                placeholder="GhanaPost GPS"
+                aria-label="GhanaPost GPS"
+                value={gps}
+                onChange={(e) => setGps(e.target.value)}
+              />
+              <input
+                className="input"
+                placeholder="Address / landmark"
+                aria-label="Address or landmark"
+                value={landmark}
+                onChange={(e) => setLandmark(e.target.value)}
+              />
+              <input
+                className="input"
+                type="tel"
+                placeholder="Contact phone"
+                aria-label="Contact phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </fieldset>
+          )}
+          <div className="mt-6 space-y-2 border-t pt-5">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <b>GHS {cartTotal(items).toFixed(2)}</b>
+            </div>
+            <div className="flex justify-between text-sm text-slate-600">
+              <span>Delivery</span>
+              <span>
+                {fulfilment === "pickup"
+                  ? "Pickup selected"
+                  : "Calculated after confirmation"}
+              </span>
+            </div>
+            <div className="flex justify-between text-xl font-black">
+              <span>Estimated total</span>
+              <span>GHS {cartTotal(items).toFixed(2)}</span>
+            </div>
+          </div>
+          <div className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4">
+            <p className="flex gap-2 font-black text-amber-950">
+              <ShieldCheck className="h-5 w-5 shrink-0" />
+              Pay only when you receive and verify your materials.
+            </p>
+            <p className="mt-2 text-xs text-amber-900">
+              Never send money to a personal account or unverified number
+              claiming to represent BuildMate. If anyone requests advance
+              payment outside BuildMate, contact Support.
+            </p>
+          </div>
+          {items.some(
+            (item) => item.inventoryMode === "confirmation_required",
+          ) && (
+            <p className="mt-4 text-sm font-semibold text-amber-800">
+              This supplier must confirm availability before the order is
+              accepted.
+            </p>
+          )}
+          {error && (
+            <div
+              className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4"
+              role="alert"
+            >
+              <p className="text-sm font-semibold text-red-800">{error}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn-secondary py-2 text-xs"
+                  onClick={() => save([])}
+                >
+                  Remove unavailable items
+                </button>
+                <Link className="btn-secondary py-2 text-xs" href="/shop">
+                  Choose another supplier
+                </Link>
+                <Link className="btn-secondary py-2 text-xs" href="/shop">
+                  Return to marketplace
+                </Link>
+              </div>
+            </div>
+          )}
+          <button
+            className="btn-primary mt-5 w-full py-3 text-base"
+            disabled={
+              pending ||
+              !items.length ||
+              (!deliveryAllowed && fulfilment === "delivery") ||
+              (!pickupAllowed && fulfilment === "pickup")
+            }
+            onClick={placeOrder}
+          >
+            {pending ? "Submitting order…" : "Place Order"}
+          </button>
+          <p className="mt-3 text-center text-xs text-slate-600">
+            You will not be charged online. By placing this order, payment is
+            due only when you receive or collect and verify the materials.
+          </p>
+        </aside>
+      </div>
+    </section>
+  );
+}

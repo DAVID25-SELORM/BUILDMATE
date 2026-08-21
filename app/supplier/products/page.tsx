@@ -57,6 +57,7 @@ export default async function SupplierProductsPage() {
       .from("supplier_branches")
       .select("id,name,is_main_branch")
       .eq("organisation_id", membership.organisationId)
+      .eq("is_active", true)
       .order("is_main_branch", { ascending: false }),
     supabase
       .from("supplier_warehouses")
@@ -198,9 +199,9 @@ export default async function SupplierProductsPage() {
         </details>
       )}
       {canCreate === true && (
-        <details className="mt-6">
+        <details className="mt-6" id="add-product" open={inventoryListings.length === 0}>
           <summary className="cursor-pointer font-bold text-brand-800">
-            Add more catalogue products
+            + Add Product from BuildMate catalogue
           </summary>
           <div className="mt-3">
             <CataloguePicker

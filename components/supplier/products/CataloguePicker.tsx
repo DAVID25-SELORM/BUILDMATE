@@ -52,10 +52,11 @@ export function CataloguePicker({
     <section className="card p-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold">Tick products you stock</h2>
+          <h2 className="text-xl font-bold">Add Product</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Select from BuildMate&apos;s catalogue. Drafts are created first;
-            add price and availability before publishing.
+            Search the BuildMate master catalogue and create a branch-specific
+            draft listing. This does not add stock; use Receive Stock after the
+            product has been added.
           </p>
         </div>
         <span className="rounded-full bg-brand-50 px-3 py-1 text-sm font-bold text-brand-800">
@@ -146,7 +147,8 @@ export function CataloguePicker({
           ))}
           {!visible.length && (
             <p className="p-6 text-center text-sm text-slate-500">
-              No catalogue products match these filters.
+              No catalogue products match these filters. Request a new catalogue
+              product from Support so the catalogue team can review and map it.
             </p>
           )}
         </div>

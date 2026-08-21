@@ -11,6 +11,26 @@ const positive = (value: FormDataEntryValue | null) => {
   return Number.isFinite(number) && number > 0 ? number : null;
 };
 
+export async function assignUnassignedListings(formData: FormData) {
+  const { supabase } = await requireSupplierPermission("products.edit");
+  const listingIds = formData
+    .getAll("listingIds")
+    .map(String)
+    .filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+  const branchId = uuid(formData.get("branchId"));
+  if (!listingIds.length || !branchId)
+    throw new Error("Select products and a destination branch");
+  if (String(formData.get("confirmation") ?? "") !== "assign")
+    throw new Error("Confirm the branch assignment");
+  const { error } = await supabase.rpc("assign_supplier_listings_branch", {
+    target_listing_ids: listingIds,
+    target_branch: branchId,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/supplier/inventory");
+  revalidatePath("/supplier/products");
+}
+
 async function ensureListingLocation(
   supabase: Awaited<ReturnType<typeof requireSupplierPermission>>["supabase"],
   organisationId: string,
@@ -28,7 +48,8 @@ async function ensureListingLocation(
   const { data: branches, error } = await supabase
     .from("supplier_branches")
     .select("id")
-    .eq("organisation_id", organisationId);
+    .eq("organisation_id", organisationId)
+    .eq("is_active", true);
   if (error) return error.message;
   if (!branches?.length)
     return "Create or configure a branch before managing inventory";
@@ -234,7 +255,9 @@ export async function setStockSetupProgress(
   });
   if (error) return { error: error.message };
   revalidatePath("/supplier/inventory");
-  return { message: status === "skipped" ? "Product skipped" : "Stock setup saved" };
+  return {
+    message: status === "skipped" ? "Product skipped" : "Stock setup saved",
+  };
 }
 
 export async function processReturn(

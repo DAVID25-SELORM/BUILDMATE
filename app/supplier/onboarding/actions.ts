@@ -150,7 +150,9 @@ export async function saveBranch(organisationId: string, input: unknown): Promis
     operating_hours: parsed.data.operatingHours,
     contact_person: parsed.data.contactPerson,
     is_main_branch: parsed.data.isMainBranch,
-    supports_pickup: parsed.data.supportsPickup
+    supports_pickup: parsed.data.supportsPickup,
+    supports_delivery: parsed.data.supportsDelivery,
+    is_active: parsed.data.isActive
   };
 
   const { error: dbError } = parsed.data.id

@@ -1,4 +1,12 @@
-import type { BusinessType, BranchType, DeliveryHandler, DocumentType, SettlementMethod, VerificationLevel, VerificationStatus } from "@/lib/supplier/constants";
+import type {
+  BusinessType,
+  BranchType,
+  DeliveryHandler,
+  DocumentType,
+  SettlementMethod,
+  VerificationLevel,
+  VerificationStatus,
+} from "@/lib/supplier/constants";
 
 export interface SupplierOrganisation {
   id: string;
@@ -65,6 +73,8 @@ export interface SupplierBranchRow {
   contact_person: string | null;
   is_main_branch: boolean;
   supports_pickup: boolean;
+  supports_delivery: boolean;
+  is_active: boolean;
 }
 
 export interface SupplierDeliveryCoverageRow {

@@ -4,15 +4,43 @@ import { ArrowRight, Calculator, MapPin } from "lucide-react";
 import { ProductCard } from "@/components/commerce/ProductCard";
 import { getFeaturedProducts } from "@/lib/catalogue/featured-products";
 const categories = [
-  { name: "Cement & Concrete", slug: "cement-concrete", image: "cement-and-concrete.webp" },
-  { name: "Blocks & Bricks", slug: "blocks-bricks", image: "blocks-and-bricks.webp" },
-  { name: "Steel & Reinforcement", slug: "steel-reinforcement", image: "steel-reinforcement.webp" },
+  {
+    name: "Cement & Concrete",
+    slug: "cement-concrete",
+    image: "cement-and-concrete.webp",
+  },
+  {
+    name: "Blocks & Bricks",
+    slug: "blocks-bricks",
+    image: "blocks-and-bricks.webp",
+  },
+  {
+    name: "Steel & Reinforcement",
+    slug: "steel-reinforcement",
+    image: "steel-reinforcement.webp",
+  },
   { name: "Roofing", slug: "roofing", image: "roofing-installation.webp" },
   { name: "Plumbing", slug: "plumbing", image: "plumbing-materials.webp" },
-  { name: "Electrical", slug: "electrical", image: "electrical-materials.webp" },
-  { name: "Tiles & Flooring", slug: "tiles-flooring", image: "tiles-flooring.webp" },
-  { name: "Paint & Finishes", slug: "paint-finishes", image: "paint-finishes.webp" },
-  { name: "Tools & Equipment", slug: "tools-equipment", image: "tools-equipment.webp" },
+  {
+    name: "Electrical",
+    slug: "electrical",
+    image: "electrical-materials.webp",
+  },
+  {
+    name: "Tiles & Flooring",
+    slug: "tiles-flooring",
+    image: "tiles-flooring.webp",
+  },
+  {
+    name: "Paint & Finishes",
+    slug: "paint-finishes",
+    image: "paint-finishes.webp",
+  },
+  {
+    name: "Tools & Equipment",
+    slug: "tools-equipment",
+    image: "tools-equipment.webp",
+  },
 ];
 export default async function HomePage() {
   const products = await getFeaturedProducts();
@@ -219,6 +247,45 @@ export default async function HomePage() {
               Version 1 uses assisted review. It does not claim automated
               architectural certification.
             </p>
+          </div>
+        </div>
+      </section>
+      <section className="border-y bg-brand-50/60 py-16">
+        <div className="container-shell grid gap-8 lg:grid-cols-[1fr_1.2fr] lg:items-center">
+          <div>
+            <p className="font-semibold text-brand-700">
+              TRUSTED PROFESSIONALS
+            </p>
+            <h2 className="mt-2 text-3xl font-black">
+              Materials and skilled work, connected
+            </h2>
+            <p className="mt-4 leading-7 text-slate-600">
+              Find verified masons, plumbers, electricians, carpenters,
+              painters, tilers and transport providers. Send a private request
+              and track the work through completion.
+            </p>
+            <Link className="btn-primary mt-6 inline-flex" href="/services">
+              Find a professional
+            </Link>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              ["Masonry & Construction", "masonry-construction"],
+              ["Plumbing & Electrical", "plumbing"],
+              ["Carpentry & Finishing", "carpentry"],
+              ["Transport & Delivery", "transport-delivery"],
+            ].map(([service, slug]) => (
+              <Link
+                className="card p-5 font-bold transition hover:border-brand-300"
+                href={`/services?category=${slug}`}
+                key={service}
+              >
+                {service}
+                <span className="mt-2 block text-sm font-normal text-slate-500">
+                  Browse verified providers →
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
