@@ -41,6 +41,11 @@ export default async function Settings() {
         </div>
       )}
       {(adminsError||permissionsError)&&<div className="mt-5 rounded-xl bg-red-50 p-4 text-red-700">Unable to load administrator permissions: {(adminsError??permissionsError)?.message}</div>}
+      <section className="card mt-6 p-5">
+        <h2 className="text-xl font-black">Platform Help</h2>
+        <p className="mt-2 text-sm text-slate-600">Administrator documentation, system diagnostics and technical escalation are kept separate from the user support queue.</p>
+        <div className="mt-4 flex flex-wrap gap-2"><a className="btn-secondary" href="/admin/security">System diagnostics</a><a className="btn-secondary" href="mailto:platform-help@buildmate.com">Technical escalation</a></div>
+      </section>
       <div className="mt-6 space-y-4">
         {(admins ?? []).map((a) => {
           const granted = new Set(

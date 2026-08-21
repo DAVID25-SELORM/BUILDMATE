@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { ADMIN_NAV } from "@/lib/admin/navigation";
@@ -91,6 +92,10 @@ export default async function AdminDashboard() {
     { data: products },
     { data: orders },
     { data: suppliers },
+    { count: supportOpen },
+    { count: supportUrgent },
+    { count: supportUnassigned },
+    { count: supportAwaiting },
   ] = await Promise.all([
     s.rpc("admin_overview_metrics"),
     s.from("products").select("categories(name)"),
@@ -99,6 +104,10 @@ export default async function AdminDashboard() {
       .from("organisations")
       .select("id,name")
       .eq("organisation_type", "supplier"),
+    s.from("support_tickets").select("id", { count: "exact", head: true }).in("status", ["open", "in_progress"]),
+    s.from("support_tickets").select("id", { count: "exact", head: true }).eq("priority", "urgent").in("status", ["open", "in_progress"]),
+    s.from("support_tickets").select("id", { count: "exact", head: true }).is("assigned_to", null).in("status", ["open", "in_progress"]),
+    s.from("support_tickets").select("id", { count: "exact", head: true }).eq("status", "open"),
   ]);
   const categories = new Map<string, number>();
   products?.forEach((p) => {
@@ -188,6 +197,10 @@ export default async function AdminDashboard() {
           detail="Completed against all orders"
         />
       </div>
+      <section className="card mt-6 p-5">
+        <div className="flex items-center justify-between gap-3"><div><h2 className="text-xl font-black">Support attention</h2><p className="text-sm text-slate-600">Live requests requiring operational follow-up.</p></div><Link className="text-sm font-bold text-brand-700" href="/admin/support">Open Support →</Link></div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[["Open",supportOpen??0,"open"],["Urgent",supportUrgent??0,"urgent"],["Unassigned",supportUnassigned??0,"unassigned"],["Awaiting response",supportAwaiting??0,"open"]].map(([label,value,filter])=><Link className="rounded-xl bg-slate-50 p-4" href={`/admin/support?filter=${filter}`} key={label}><p className="text-xs font-bold uppercase text-slate-500">{label}</p><b className="mt-1 block text-2xl">{value}</b></Link>)}</div>
+      </section>
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Chart
           title="Customer registrations"

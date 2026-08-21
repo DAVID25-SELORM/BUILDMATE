@@ -9,7 +9,7 @@ export const customerCoreNavigation = [
   { label: "Quotations", href: "/dashboard/quotes" },
   { label: "Services", href: "/dashboard/services" },
   { label: "Account", href: "/dashboard/account" },
-  { label: "Support", href: "/contact" },
+  { label: "Support", href: "/support" },
 ] as const;
 
 export async function supplierNavigation(organisationId: string) {
@@ -38,6 +38,7 @@ export async function supplierNavigation(organisationId: string) {
     checks[5] && { label: "Settlements", href: "/supplier/settlements" },
     checks[6] && { label: "Staff", href: "/supplier/staff" },
     checks[7] && { label: "Organisation settings", href: "/supplier/settings" },
+    { label: "Support", href: "/support" },
   ].filter(Boolean) as { label: string; href: string }[];
 }
 export async function customerNavigation(organisationId?: string) {

@@ -43,6 +43,11 @@ export const PLATFORM_PERMISSION_KEYS = [
   "settlements.release",
   "reports.view",
   "audit_logs.view"
+  ,"support.view"
+  ,"support.reply"
+  ,"support.assign"
+  ,"support.resolve"
+  ,"support.manage"
 ] as const;
 export type PlatformPermissionKey = (typeof PLATFORM_PERMISSION_KEYS)[number];
 
@@ -64,6 +69,11 @@ export const PLATFORM_PERMISSION_LABELS: Record<PlatformPermissionKey, string> =
   "settlements.release": "Release settlements",
   "reports.view": "View reports",
   "audit_logs.view": "View audit logs"
+  ,"support.view": "View support tickets"
+  ,"support.reply": "Reply to support tickets"
+  ,"support.assign": "Assign support tickets"
+  ,"support.resolve": "Resolve support tickets"
+  ,"support.manage": "Manage support settings"
 };
 
 export const INVITATION_STATUS_LABELS = {

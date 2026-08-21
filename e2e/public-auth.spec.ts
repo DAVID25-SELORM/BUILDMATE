@@ -31,6 +31,19 @@ test("protected routes redirect anonymous visitors", async ({ page }) => {
   await page.goto("/admin/catalogue");
   await expect(page).toHaveURL(/\/login\?redirect=/);
 });
+test("support centre exposes ticket escalation without mobile overflow", async ({ page }) => {
+  await page.goto("/shop");
+  await page.getByRole("button", { name: "Get Support" }).click();
+  await expect(page.getByRole("heading", { name: "How can we help?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Still need help?" })).toBeVisible();
+  await page.getByLabel("Problem").selectOption("orders");
+  await expect(page.getByRole("button", { name: "Contact BuildMate Support" })).toBeVisible();
+  await expect(page.getByText(/Cash on Delivery/)).toBeVisible();
+  const box = await page.getByRole("dialog").boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+});
 test("shop loads and filters eligible master products by default", async ({
   page,
 }) => {
