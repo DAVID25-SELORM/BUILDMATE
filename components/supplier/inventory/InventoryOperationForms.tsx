@@ -2,11 +2,13 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   adjustStock,
   configureInventory,
   receiveStock,
+  setOpeningStock,
   recordStockCount,
   setStockSetupProgress,
   transferStock,
@@ -170,6 +172,9 @@ export function InventoryOperationForms({
     receiveStock,
     initial,
   );
+  const [receiveRequestKey, setReceiveRequestKey] = useState(() =>
+    crypto.randomUUID(),
+  );
   const [selectedReceiveId, setSelectedReceiveId] = useState(
     receiveListing ?? "",
   );
@@ -212,9 +217,13 @@ export function InventoryOperationForms({
   const setupPosition = setupItem
     ? handledSetupIds.length + 1
     : setupListings.length;
+  const setupRequestKey = useMemo(
+    () => `${setupItem?.id.slice(0, 0) ?? ""}${crypto.randomUUID()}`,
+    [setupItem?.id],
+  );
   const [setupState, setupAction, setupPending] = useActionState(
     async (_: InventoryActionState, formData: FormData) => {
-      const result = await receiveStock(initial, formData);
+      const result = await setOpeningStock(initial, formData);
       const completedId = String(formData.get("listingId") ?? "");
       if (!result.error) {
         const configuration = new FormData();
@@ -245,19 +254,28 @@ export function InventoryOperationForms({
     if (name === "receive") {
       setSelectedReceiveId(listingId ?? "");
       setRowLocked(Boolean(listingId));
+      setReceiveRequestKey(crypto.randomUUID());
     }
     dialogs.current[name]?.showModal();
   };
   const close = (name: DialogName) => dialogs.current[name]?.close();
   useEffect(() => {
-    if (receiveListing && canReceive && dialogs.current.receive && !dialogs.current.receive.open) dialogs.current.receive.showModal();
+    if (
+      receiveListing &&
+      canReceive &&
+      dialogs.current.receive &&
+      !dialogs.current.receive.open
+    )
+      dialogs.current.receive.showModal();
   }, [receiveListing, canReceive]);
   useEffect(() => {
     const handleOperation = (event: Event) => {
-      const detail = (event as CustomEvent<{
-        operation?: DialogName;
-        listingId?: string;
-      }>).detail;
+      const detail = (
+        event as CustomEvent<{
+          operation?: DialogName;
+          listingId?: string;
+        }>
+      ).detail;
       if (detail?.operation) open(detail.operation, detail.listingId);
     };
     window.addEventListener(inventoryOperationEvent, handleOperation);
@@ -369,33 +387,75 @@ export function InventoryOperationForms({
         onClose={() => close("receive")}
       >
         <form action={receiveAction}>
+          <input type="hidden" name="requestKey" value={receiveRequestKey} />
           {selectedReceive && (
             <section className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Product</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">
+                    Product
+                  </p>
                   <h3 className="mt-1 text-lg font-black text-slate-950">
                     {selectedReceive.product}
-                    {selectedReceive.variant ? ` — ${selectedReceive.variant}` : ""}
+                    {selectedReceive.variant
+                      ? ` — ${selectedReceive.variant}`
+                      : ""}
                   </h3>
                   <p className="mt-1 text-sm text-slate-700">
                     {selectedReceive.branch ?? "Unassigned"}
                     {selectedReceive.branchIsMain ? " · Main Branch" : ""}
                   </p>
                 </div>
-                <span className={`rounded-full px-3 py-1 text-xs font-bold ${selectedReceive.marketplace === "Visible" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-bold ${selectedReceive.marketplace === "Visible" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}
+                >
                   {selectedReceive.marketplace}
                 </span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <SummaryValue label="Selling price" value={selectedReceive.price == null ? "Not set" : `GHS ${selectedReceive.price.toFixed(2)}${selectedReceive.unit ? ` / ${selectedReceive.unit}` : ""}`} />
-                <SummaryValue label="On hand" value={selectedReceive.onHand ?? "—"} />
-                <SummaryValue label="Reserved" value={selectedReceive.reserved ?? "—"} />
-                <SummaryValue label="Available" value={selectedReceive.available ?? "—"} />
-                <SummaryValue label="Average cost" value={!canViewCost ? "Restricted" : selectedReceive.averageCost == null ? "Not yet set" : `GHS ${selectedReceive.averageCost.toFixed(2)}`} />
-                <SummaryValue label="Inventory" value={selectedReceive.onHand == null ? "Needs stock setup" : selectedReceive.inventoryMode.replaceAll("_", " ")} />
+                <SummaryValue
+                  label="Selling price"
+                  value={
+                    selectedReceive.price == null
+                      ? "Not set"
+                      : `GHS ${selectedReceive.price.toFixed(2)}${selectedReceive.unit ? ` / ${selectedReceive.unit}` : ""}`
+                  }
+                />
+                <SummaryValue
+                  label="On hand"
+                  value={selectedReceive.onHand ?? "—"}
+                />
+                <SummaryValue
+                  label="Reserved"
+                  value={selectedReceive.reserved ?? "—"}
+                />
+                <SummaryValue
+                  label="Available"
+                  value={selectedReceive.available ?? "—"}
+                />
+                <SummaryValue
+                  label="Average cost"
+                  value={
+                    !canViewCost
+                      ? "Restricted"
+                      : selectedReceive.averageCost == null
+                        ? "Not yet set"
+                        : `GHS ${selectedReceive.averageCost.toFixed(2)}`
+                  }
+                />
+                <SummaryValue
+                  label="Inventory"
+                  value={
+                    selectedReceive.onHand == null
+                      ? "Needs stock setup"
+                      : selectedReceive.inventoryMode.replaceAll("_", " ")
+                  }
+                />
               </div>
-              <a className="mt-3 inline-flex text-sm font-bold text-emerald-800 underline" href={`/supplier/products#listing-${selectedReceive.id}`}>
+              <a
+                className="mt-3 inline-flex text-sm font-bold text-emerald-800 underline"
+                href={`/supplier/products#listing-${selectedReceive.id}`}
+              >
                 Edit price
               </a>
             </section>
@@ -403,14 +463,28 @@ export function InventoryOperationForms({
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="sm:col-span-2">
               <span className="label">Product</span>
-              <ListingSelect key={selectedReceiveId || "global-receive"} name="listingId" listings={listings} defaultValue={selectedReceiveId} onChange={setSelectedReceiveId} locked={rowLocked} canViewCost={canViewCost} />
-              {rowLocked && selectedReceiveId && <input type="hidden" name="listingId" value={selectedReceiveId} />}
+              <ListingSelect
+                key={selectedReceiveId || "global-receive"}
+                name="listingId"
+                listings={listings}
+                defaultValue={selectedReceiveId}
+                onChange={setSelectedReceiveId}
+                locked={rowLocked}
+                canViewCost={canViewCost}
+              />
+              {rowLocked && selectedReceiveId && (
+                <input
+                  type="hidden"
+                  name="listingId"
+                  value={selectedReceiveId}
+                />
+              )}
               {selectedReceive?.branch && (
                 <input type="hidden" name="listingHasLocation" value="true" />
               )}
             </label>
             <label>
-              <span className="label">Quantity</span>
+              <span className="label">Quantity received</span>
               <input
                 className="input"
                 name="quantity"
@@ -422,6 +496,9 @@ export function InventoryOperationForms({
             </label>
             <label>
               <span className="label">Unit cost (GHS)</span>
+              <span className="mb-1 block text-xs text-slate-500">
+                Your cost per unit for this stock.
+              </span>
               <input
                 className="input"
                 name="unitCost"
@@ -432,12 +509,24 @@ export function InventoryOperationForms({
               />
             </label>
             <label>
-              <span className="label">Vendor</span>
+              <span className="label">
+                Vendor{" "}
+                <span className="font-normal text-slate-500">Optional</span>
+              </span>
+              <span className="mb-1 block text-xs text-slate-500">
+                Who supplied this stock?
+              </span>
               <input className="input" name="vendor" />
             </label>
             <label>
-              <span className="label">Invoice/reference</span>
-              <input className="input" name="invoice" required />
+              <span className="label">
+                Vendor invoice / delivery note{" "}
+                <span className="font-normal text-slate-500">Optional</span>
+              </span>
+              <span className="mb-1 block text-xs text-slate-500">
+                Optional reference from your vendor.
+              </span>
+              <input className="input" name="invoice" />
             </label>
             <label>
               <span className="label">Received date</span>
@@ -450,7 +539,10 @@ export function InventoryOperationForms({
               />
             </label>
             <label>
-              <span className="label">Notes</span>
+              <span className="label">
+                Notes{" "}
+                <span className="font-normal text-slate-500">Optional</span>
+              </span>
               <input className="input" name="notes" />
             </label>
           </div>
@@ -460,6 +552,42 @@ export function InventoryOperationForms({
             label={receivePending ? "Saving stock…" : "Review receipt"}
           />
           <Status state={receiveState} />
+          {receiveState.internalReference && selectedReceive && (
+            <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+              <p className="font-black text-emerald-900">
+                Stock received successfully
+              </p>
+              <p className="mt-2 text-sm">BuildMate receipt</p>
+              <p className="text-xl font-black">
+                {receiveState.internalReference}
+              </p>
+              <p className="mt-2 text-sm">
+                Available: <b>{receiveState.resultingAvailable}</b>
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link
+                  className="btn-secondary"
+                  href={`/supplier/inventory/${selectedReceive.id}#movements`}
+                >
+                  View movement
+                </Link>
+                <button
+                  className="btn-secondary"
+                  type="button"
+                  onClick={() => setReceiveRequestKey(crypto.randomUUID())}
+                >
+                  Receive more stock
+                </button>
+                <button
+                  className="btn-primary"
+                  type="button"
+                  onClick={() => close("receive")}
+                >
+                  Done
+                </button>
+              </div>
+            </section>
+          )}
         </form>
       </InventoryDialog>
 
@@ -675,7 +803,7 @@ export function InventoryOperationForms({
       </InventoryDialog>
 
       <InventoryDialog
-        title="Stock Setup"
+        title="Set Up Opening Stock"
         dialogRef={(node) => {
           dialogs.current.setup = node;
         }}
@@ -685,18 +813,19 @@ export function InventoryOperationForms({
           <div className="py-8 text-center">
             <p className="text-xl font-black">Stock setup complete</p>
             <p className="mt-2 text-sm text-slate-600">
-              Every saved quantity was recorded through a stock receipt
-              movement.
+              Every saved quantity was recorded as immutable opening stock.
             </p>
           </div>
         ) : (
           <form action={setupAction}>
+            <input type="hidden" name="requestKey" value={setupRequestKey} />
             <p className="text-sm font-bold text-brand-700">
               {setupPosition} of {setupListings.length} products
             </p>
             {setupLastSavedAt && (
               <p className="mt-1 text-xs text-slate-500">
-                Progress last saved {new Date(setupLastSavedAt).toLocaleString("en-GH")}
+                Progress last saved{" "}
+                {new Date(setupLastSavedAt).toLocaleString("en-GH")}
               </p>
             )}
             <h3 className="mt-2 text-xl font-black">
@@ -724,9 +853,16 @@ export function InventoryOperationForms({
               warehouseCount={warehouseCount}
             />
             <input type="hidden" name="listingId" value={setupItem.id} />
+            {setupItem.branch && (
+              <input type="hidden" name="listingHasLocation" value="true" />
+            )}
+            <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+              Opening stock establishes the first immutable inventory balance.
+              Later corrections are recorded as separate stock movements.
+            </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <label>
-                <span className="label">Current quantity</span>
+                <span className="label">Quantity on hand</span>
                 <input
                   className="input"
                   name="quantity"
@@ -748,21 +884,21 @@ export function InventoryOperationForms({
                 />
               </label>
               <label>
-                <span className="label">Receipt date</span>
+                <span className="label">As-of date</span>
                 <input
                   className="input"
                   name="receivedDate"
                   type="date"
+                  defaultValue={new Date().toISOString().slice(0, 10)}
                   required
                 />
               </label>
               <label>
-                <span className="label">Source/reference</span>
-                <input className="input" name="invoice" required />
-              </label>
-              <label className="sm:col-span-2">
-                <span className="label">Vendor</span>
-                <input className="input" name="vendor" />
+                <span className="label">
+                  Notes{" "}
+                  <span className="font-normal text-slate-500">Optional</span>
+                </span>
+                <input className="input" name="notes" />
               </label>
               <label className="sm:col-span-2">
                 <span className="label">Reorder level</span>
@@ -780,8 +916,8 @@ export function InventoryOperationForms({
                 {setupPending
                   ? "Saving…"
                   : setupPosition === setupListings.length
-                    ? "Save & Finish"
-                    : "Save & Next"}
+                    ? "Set Opening Stock & Finish"
+                    : "Set Opening Stock & Next"}
               </button>
               <button
                 className="btn-secondary"

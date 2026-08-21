@@ -56,6 +56,6 @@ describe("receive stock interaction", () => {
     expect(review).toContain("Potential sales value");
     expect(review).toContain("Potential gross margin");
     expect(review).not.toContain("realised profit");
-    expect(review).toContain("Confirm Stock Receipt");
+    expect(review).toContain("Confirm & Receive Stock");
   });
 });

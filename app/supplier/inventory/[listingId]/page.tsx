@@ -13,6 +13,10 @@ type Movement = {
   resulting_reserved: number;
   reference_type: string | null;
   reference_id: string | null;
+  internal_reference: string | null;
+  vendor: string | null;
+  external_reference: string | null;
+  receipt_date: string | null;
   reason: string;
   created_by: string | null;
   created_at: string;
@@ -255,9 +259,20 @@ export default async function InventoryDetail({
                   </time>
                 </div>
                 <p className="mt-1 text-sm text-slate-700">{movement.reason}</p>
+                {movement.internal_reference && (
+                  <p className="mt-2 font-mono text-sm font-black text-brand-800">
+                    {movement.internal_reference}
+                  </p>
+                )}
+                {(movement.vendor || movement.external_reference) && (
+                  <p className="mt-1 text-sm text-slate-600">
+                    Vendor: {movement.vendor ?? "Not provided"} · Vendor
+                    reference: {movement.external_reference ?? "Not provided"}
+                  </p>
+                )}
                 <p className="mt-1 text-xs text-slate-500">
                   {movement.reference_type
-                    ? `${movement.reference_type.replaceAll("_", " ")}${movement.reference_id ? ` · ${movement.reference_id}` : ""}`
+                    ? movement.reference_type.replaceAll("_", " ")
                     : "No external reference"}{" "}
                   · {movement.created_by ?? "System"} · On hand{" "}
                   {movement.previous_on_hand} → {movement.resulting_on_hand}

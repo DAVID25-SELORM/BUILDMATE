@@ -52,6 +52,11 @@ export function ConfirmInventoryAction({
         `Location: ${option?.dataset.branch ?? "Selected location"}`,
         `Current on hand: ${current}`,
         `Quantity received: +${quantity}`,
+        `Stock value received: ${canViewCost ? `GHS ${(quantity * unitCost).toFixed(2)}` : "Restricted"}`,
+        `Vendor: ${get("vendor").trim() || "Not provided"}`,
+        `Vendor invoice / delivery note: ${get("invoice").trim() || "Not provided"}`,
+        `Received date: ${get("receivedDate")}`,
+        "BuildMate receipt reference: Generated automatically after posting",
         `New on hand: ${projected}`,
         `Receipt unit cost: GHS ${unitCost.toFixed(2)}`,
         `Projected weighted average cost: ${canViewCost ? `GHS ${weighted.toFixed(2)}` : "Restricted"}`,
@@ -139,7 +144,7 @@ export function ConfirmInventoryAction({
               {disabled
                 ? "Saving stock…"
                 : kind === "receipt"
-                  ? "Confirm Stock Receipt"
+                  ? "Confirm & Receive Stock"
                   : "Confirm and submit"}
             </button>
           </div>

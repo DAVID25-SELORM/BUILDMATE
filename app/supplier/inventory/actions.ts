@@ -3,7 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { requireSupplierPermission } from "@/lib/organisations/access";
 
-export type InventoryActionState = { error?: string; message?: string };
+export type InventoryActionState = {
+  error?: string;
+  message?: string;
+  receiptId?: string;
+  internalReference?: string;
+  resultingOnHand?: number;
+  resultingAvailable?: number;
+};
 const uuid = (value: FormDataEntryValue | null) =>
   /^[0-9a-f-]{36}$/i.test(String(value ?? "")) ? String(value) : null;
 const positive = (value: FormDataEntryValue | null) => {
@@ -80,7 +87,8 @@ export async function receiveStock(
     unitCost = positive(formData.get("unitCost"));
   if (!listing) return { error: "Choose a product." };
   if (!quantity) return { error: "Quantity must be greater than zero." };
-  if (unitCost === null) return { error: "Unit cost must be greater than zero." };
+  if (unitCost === null)
+    return { error: "Unit cost must be greater than zero." };
   // A preloaded branch lets the authoritative receipt RPC validate the
   // location directly. Legacy unassigned listings retain the single-branch
   // auto-assignment path.
@@ -94,22 +102,101 @@ export async function receiveStock(
   }
   const receivedDate = String(formData.get("receivedDate") ?? "");
   if (!receivedDate) return { error: "Enter the truthful receipt date" };
-  const invoice = String(formData.get("invoice") ?? "").trim();
-  if (!invoice)
-    return { error: "Enter the receipt invoice or source reference" };
-  const { error } = await supabase.rpc("inventory_receive_stock", {
+  const requestKey = uuid(formData.get("requestKey"));
+  if (!requestKey) return { error: "Refresh the form and try again." };
+  const { data, error } = await supabase.rpc("inventory_receive_stock", {
     target_listing: listing,
     target_quantity: quantity,
     target_unit_cost: unitCost,
     target_vendor: String(formData.get("vendor") ?? ""),
-    target_invoice: invoice,
+    target_invoice: String(formData.get("invoice") ?? ""),
     target_received_date: receivedDate,
     target_notes: String(formData.get("notes") ?? ""),
-  });
+    target_request_key: requestKey,
+  } as never);
   if (error) return { error: error.message };
+  const result = (
+    data as unknown as
+      | {
+          receipt_id: string;
+          internal_reference: string;
+          resulting_on_hand: number;
+          resulting_available: number;
+        }[]
+      | null
+  )?.[0];
+  if (!result)
+    return {
+      error: "The receipt was not returned. Please check movement history.",
+    };
   revalidatePath("/supplier/inventory");
+  revalidatePath(`/supplier/inventory/${listing}`);
   return {
     message: `Stock received successfully. ${quantity} units were added.`,
+    receiptId: result.receipt_id,
+    internalReference: result.internal_reference,
+    resultingOnHand: result.resulting_on_hand,
+    resultingAvailable: result.resulting_available,
+  };
+}
+
+export async function setOpeningStock(
+  _: InventoryActionState,
+  formData: FormData,
+): Promise<InventoryActionState> {
+  const { supabase, membership } =
+    await requireSupplierPermission("inventory.receive");
+  const listing = uuid(formData.get("listingId")),
+    quantity = positive(formData.get("quantity")),
+    unitCost = positive(formData.get("unitCost")),
+    requestKey = uuid(formData.get("requestKey"));
+  if (!listing) return { error: "Choose a product." };
+  if (!quantity)
+    return { error: "Opening quantity must be greater than zero." };
+  if (!unitCost) return { error: "Unit cost must be greater than zero." };
+  if (!requestKey) return { error: "Refresh the form and try again." };
+  if (formData.get("listingHasLocation") !== "true") {
+    const locationError = await ensureListingLocation(
+      supabase,
+      membership.organisationId,
+      listing,
+    );
+    if (locationError) return { error: locationError };
+  }
+  const asOfDate = String(formData.get("receivedDate") ?? "");
+  if (!asOfDate) return { error: "Enter the opening-stock as-of date." };
+  const { data, error } = await supabase.rpc("inventory_set_opening_stock", {
+    target_listing: listing,
+    target_quantity: quantity,
+    target_unit_cost: unitCost,
+    target_as_of_date: asOfDate,
+    target_notes: String(formData.get("notes") ?? ""),
+    target_request_key: requestKey,
+  } as never);
+  if (error) return { error: error.message };
+  const result = (
+    data as unknown as
+      | {
+          receipt_id: string;
+          internal_reference: string;
+          resulting_on_hand: number;
+          resulting_available: number;
+        }[]
+      | null
+  )?.[0];
+  if (!result)
+    return {
+      error:
+        "The opening stock entry was not returned. Please check movement history.",
+    };
+  revalidatePath("/supplier/inventory");
+  revalidatePath(`/supplier/inventory/${listing}`);
+  return {
+    message: `Opening stock set successfully. ${quantity} units were added.`,
+    receiptId: result.receipt_id,
+    internalReference: result.internal_reference,
+    resultingOnHand: result.resulting_on_hand,
+    resultingAvailable: result.resulting_available,
   };
 }
 
