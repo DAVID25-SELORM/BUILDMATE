@@ -13,7 +13,7 @@ export default async function AdminServiceProviders({
   let query = s
     .from("service_provider_profiles")
     .select(
-      "id,display_name,region,city,verification_status,account_status,availability_status,average_rating,review_count,completed_jobs,created_at,profiles(full_name,email)",
+      "id,display_name,region,city,verification_status,account_status,availability_status,average_rating,review_count,completed_jobs,created_at,profiles(full_name)",
     )
     .order("created_at", { ascending: false });
   if (q.status) query = query.eq("verification_status", q.status);

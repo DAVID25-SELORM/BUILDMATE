@@ -119,3 +119,26 @@ export async function updateProviderAvailability(
   revalidatePath("/provider");
   revalidatePath("/provider/availability");
 }
+
+export async function updateProviderProfile(
+  providerId: string,
+  formData: FormData,
+) {
+  await requireUser();
+  const supabase = await createClient();
+  const radius = text(formData, "serviceRadiusKm");
+  const { error } = await supabase.rpc("update_service_provider_profile", {
+    target_provider: providerId,
+    target_display_name: text(formData, "displayName"),
+    target_bio: text(formData, "bio"),
+    target_phone: text(formData, "phone"),
+    target_region: text(formData, "region"),
+    target_city: text(formData, "city"),
+    target_radius: radius ? Number(radius) : null,
+  });
+  if (error)
+    redirect(`/provider/profile?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/provider");
+  revalidatePath("/provider/profile");
+  redirect("/provider/profile?saved=1");
+}

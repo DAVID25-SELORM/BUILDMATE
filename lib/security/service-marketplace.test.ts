@@ -5,6 +5,10 @@ const migration = readFileSync(
   "supabase/migrations/202608220067_service_marketplace_and_branch_controls.sql",
   "utf8",
 );
+const hardening = readFileSync(
+  "supabase/migrations/202608220068_service_marketplace_security_hardening.sql",
+  "utf8",
+);
 const shell = readFileSync("components/dashboard/DashboardShell.tsx", "utf8");
 
 describe("service marketplace and safe previews", () => {
@@ -40,5 +44,22 @@ describe("service marketplace and safe previews", () => {
       "'confirmation_required','confirmation_required',false,'draft',target_branch,target_warehouse",
     );
     expect(migration).toContain("LISTINGS_BRANCH_ASSIGNED");
+  });
+
+  it("blocks direct lifecycle and verification writes", () => {
+    expect(hardening).toContain(
+      'drop policy if exists "provider profile owner update"',
+    );
+    expect(hardening).toContain(
+      'drop policy if exists "service request provider update"',
+    );
+    expect(hardening).toContain("admin_review_service_provider");
+    expect(hardening).toContain("SERVICE_PROVIDER_REVIEWED");
+  });
+
+  it("keeps provider document decisions admin-controlled", () => {
+    expect(hardening).toContain('create policy "provider documents submit"');
+    expect(hardening).toContain("status='pending'");
+    expect(hardening).toContain("admin_review_service_provider_document");
   });
 });
