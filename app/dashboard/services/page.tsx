@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { customerProgressServiceRequest } from "@/app/services/actions";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { requireUser } from "@/lib/auth/session";
+import { getCustomerOrganisationMembership } from "@/lib/organisations/access";
+import { customerNavigation } from "@/lib/organisations/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function CustomerServicesPage({
@@ -11,15 +14,21 @@ export default async function CustomerServicesPage({
   const q = await searchParams;
   const { user } = await requireUser();
   const s = await createClient();
-  const { data } = await s
-    .from("service_requests")
-    .select(
-      "id,request_number,title,status,preferred_at,provider_message,created_at,service_categories(name),service_provider_profiles(display_name)",
-    )
-    .eq("customer_id", user.id)
-    .order("created_at", { ascending: false });
+  const [{ data }, { membership }] = await Promise.all([
+    s
+      .from("service_requests")
+      .select(
+        "id,request_number,title,status,preferred_at,provider_message,created_at,service_categories(name),service_provider_profiles(display_name)",
+      )
+      .eq("customer_id", user.id)
+      .order("created_at", { ascending: false }),
+    getCustomerOrganisationMembership(),
+  ]);
   return (
-    <main className="container-shell py-10">
+    <DashboardShell
+      title="Customer workspace"
+      nav={await customerNavigation(membership?.organisation_id)}
+    >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black">My service requests</h1>
@@ -105,6 +114,6 @@ export default async function CustomerServicesPage({
           </div>
         )}
       </div>
-    </main>
+    </DashboardShell>
   );
 }

@@ -1,4 +1,2 @@
 import { GenericPortalPreview } from "@/components/admin/GenericPortalPreview";
-export default function Page() {
-  return <GenericPortalPreview type="customer" />;
-}
+export default function Page() { return <GenericPortalPreview type="customer" />; }

@@ -1,5 +1,17 @@
 import { hasPermission } from "@/lib/auth/permissions";
 
+export const customerCoreNavigation = [
+  { label: "Home", href: "/dashboard" },
+  { label: "Shop", href: "/shop" },
+  { label: "Categories", href: "/#categories" },
+  { label: "Projects", href: "/dashboard/plan-to-procurement" },
+  { label: "Orders", href: "/dashboard/orders" },
+  { label: "Quotations", href: "/dashboard/quotes" },
+  { label: "Services", href: "/dashboard/services" },
+  { label: "Account", href: "/dashboard/account" },
+  { label: "Support", href: "/contact" },
+] as const;
+
 export async function supplierNavigation(organisationId: string) {
   const checks = await Promise.all(
     [
@@ -44,11 +56,7 @@ export async function customerNavigation(organisationId?: string) {
       ])
     : [false, false, false, false];
   return [
-    { label: "Home", href: "/dashboard" },
-    { label: "Shop", href: "/shop" },
-    { label: "Projects", href: "/dashboard/plan-to-procurement" },
-    { label: "Orders", href: "/dashboard/orders" },
-    { label: "Quotations", href: "/dashboard/quotes" },
+    ...customerCoreNavigation.slice(0, 7),
     (requestCreate || requestApprove) && {
       label:
         requestApprove && !requestCreate ? "Approvals" : "Purchase requests",
@@ -59,5 +67,6 @@ export async function customerNavigation(organisationId?: string) {
       label: "Account settings",
       href: "/dashboard/organisation/settings",
     },
+    ...customerCoreNavigation.slice(7),
   ].filter(Boolean) as { label: string; href: string }[];
 }
