@@ -58,4 +58,20 @@ describe("receive stock interaction", () => {
     expect(review).not.toContain("realised profit");
     expect(review).toContain("Confirm & Receive Stock");
   });
+
+  it("uses one reliable inline review step for every inventory operation", () => {
+    expect(review).toContain("setReviewing(true)");
+    expect(review).toContain('aria-live="polite"');
+    expect(review).toContain("Back to edit");
+    expect(review).toContain("formRef.current?.requestSubmit()");
+    expect(review).not.toContain("showModal()");
+    expect(review).not.toContain("<dialog");
+    for (const kind of [
+      'kind="receipt"',
+      'kind="adjustment"',
+      'kind="transfer"',
+    ]) {
+      expect(forms).toContain(kind);
+    }
+  });
 });

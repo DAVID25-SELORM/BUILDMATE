@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 export function ConfirmInventoryAction({
   kind,
   disabled,
@@ -9,9 +9,21 @@ export function ConfirmInventoryAction({
   disabled: boolean;
   label: string;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null),
-    formRef = useRef<HTMLFormElement | null>(null),
-    [lines, setLines] = useState<string[]>([]);
+  const formRef = useRef<HTMLFormElement | null>(null),
+    [lines, setLines] = useState<string[]>([]),
+    [reviewing, setReviewing] = useState(false);
+  useEffect(() => {
+    if (!reviewing) return;
+    const form = formRef.current;
+    if (!form) return;
+    const invalidateReview = () => setReviewing(false);
+    form.addEventListener("input", invalidateReview);
+    form.addEventListener("change", invalidateReview);
+    return () => {
+      form.removeEventListener("input", invalidateReview);
+      form.removeEventListener("change", invalidateReview);
+    };
+  }, [reviewing]);
   function open(event: React.MouseEvent<HTMLButtonElement>) {
     const form = event.currentTarget.form;
     if (!form) return;
@@ -97,7 +109,7 @@ export function ConfirmInventoryAction({
         `Reason: ${get("reason") || "Missing"}`,
         "Available and projected balances will be validated atomically by the ledger.",
       ]);
-    dialog.current?.showModal();
+    setReviewing(true);
   }
   return (
     <>
@@ -109,14 +121,18 @@ export function ConfirmInventoryAction({
       >
         {label}
       </button>
-      <dialog
-        ref={dialog}
-        className="m-auto w-full max-w-lg rounded-2xl p-0 backdrop:bg-slate-950/40"
-      >
-        <div className="p-6">
+      {reviewing && (
+        <section
+          className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5"
+          aria-live="polite"
+          aria-label={kind === "receipt" ? "Stock receipt review" : `${kind} review`}
+        >
           <h3 className="text-xl font-black">
             {kind === "receipt" ? "Review Stock Receipt" : `Confirm ${kind}`}
           </h3>
+          <p className="mt-1 text-sm text-slate-600">
+            Check these details before posting the inventory movement.
+          </p>
           <ul className="mt-4 space-y-2 text-sm">
             {lines.map((line) => (
               <li className="rounded-lg bg-slate-50 p-2" key={line}>
@@ -128,16 +144,16 @@ export function ConfirmInventoryAction({
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => dialog.current?.close()}
+              onClick={() => setReviewing(false)}
             >
-              Cancel
+              Back to edit
             </button>
             <button
               type="button"
               className="btn-primary"
               disabled={disabled}
               onClick={() => {
-                dialog.current?.close();
+                setReviewing(false);
                 formRef.current?.requestSubmit();
               }}
             >
@@ -148,8 +164,8 @@ export function ConfirmInventoryAction({
                   : "Confirm and submit"}
             </button>
           </div>
-        </div>
-      </dialog>
+        </section>
+      )}
     </>
   );
 }
