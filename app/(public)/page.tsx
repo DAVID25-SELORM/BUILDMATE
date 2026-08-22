@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Calculator, MapPin } from "lucide-react";
+import { CategoryMedia } from "@/components/commerce/CategoryMedia";
 import { ProductCard } from "@/components/commerce/ProductCard";
 import { getFeaturedProducts } from "@/lib/catalogue/featured-products";
-import { categoryImage } from "@/lib/catalogue/category-images";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function HomePage() {
@@ -12,7 +12,7 @@ export default async function HomePage() {
     getFeaturedProducts(),
     supabase
       .from("categories")
-      .select("id,name,slug")
+      .select("id,name,slug,image_path,image_alt,description")
       .eq("is_active", true)
       .is("parent_id", null)
       .order("sort_order"),
@@ -125,15 +125,21 @@ export default async function HomePage() {
               className="card group overflow-hidden"
             >
               <div className="relative aspect-[4/3]">
-                <Image
-                  src={`/images/categories/${categoryImage(c.slug)}`}
-                  alt={`${c.name} construction materials`}
-                  fill
+                <CategoryMedia
+                  imagePath={c.image_path}
+                  imageAlt={c.image_alt}
+                  categoryName={c.name}
                   sizes="(max-width: 768px) 50vw, 33vw"
-                  className="object-cover transition duration-300 group-hover:scale-105"
                 />
               </div>
-              <h3 className="p-4 font-bold">{c.name}</h3>
+              <div className="p-4">
+                <h3 className="font-bold">{c.name}</h3>
+                {c.description && (
+                  <p className="mt-1 line-clamp-2 text-sm text-slate-600">
+                    {c.description}
+                  </p>
+                )}
+              </div>
             </Link>
           ))}
         </div>

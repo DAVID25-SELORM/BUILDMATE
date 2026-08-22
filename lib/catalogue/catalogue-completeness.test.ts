@@ -89,7 +89,9 @@ describe("catalogue user experience", () => {
     expect(home).toContain('href="/shop#categories"');
     expect(shop).toContain('id="categories"');
     expect(shop).toContain("topLevelCategories.map");
-    expect(shop).toContain("categoryImage(item.slug)");
+    expect(home).toContain("image_path,image_alt,description");
+    expect(shop).toContain("image_path,image_alt,description");
+    expect(shop).toContain("imagePath={item.image_path}");
   });
 
   it("shows category and marketplace visibility to suppliers", () => {

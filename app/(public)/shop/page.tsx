@@ -1,7 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
+import { CategoryMedia } from "@/components/commerce/CategoryMedia";
 import { ProductCard } from "@/components/commerce/ProductCard";
-import { categoryImage } from "@/lib/catalogue/category-images";
 import { matchesDeliveryCoverage } from "@/lib/delivery/coverage";
 import { createClient } from "@/lib/supabase/server";
 
@@ -88,7 +87,7 @@ export default async function ShopPage({
   const supabase = await createClient();
   const categoryResult = await supabase
     .from("categories")
-    .select("id,parent_id,name,slug")
+    .select("id,parent_id,name,slug,image_path,image_alt,description")
     .eq("is_active", true)
     .order("sort_order");
   const categoryRows = categoryResult.data ?? [];
@@ -299,12 +298,11 @@ export default async function ShopPage({
               key={item.id}
             >
               <div className="relative aspect-[3/2]">
-                <Image
-                  src={`/images/categories/${categoryImage(item.slug)}`}
-                  alt=""
-                  fill
+                <CategoryMedia
+                  imagePath={item.image_path}
+                  imageAlt={item.image_alt}
+                  categoryName={item.name}
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                  className="object-cover transition duration-300 group-hover:scale-105"
                 />
               </div>
               <span className="block p-3 text-sm font-bold">{item.name}</span>
