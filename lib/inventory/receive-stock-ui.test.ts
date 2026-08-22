@@ -76,8 +76,9 @@ describe("receive stock interaction", () => {
   });
 
   it("finds the actual select when a locked receipt has duplicate field names", () => {
-    expect(review).toContain("Array.from(form.elements).find(");
-    expect(review).toContain("element instanceof HTMLSelectElement");
+    expect(review).toContain('form.querySelectorAll<HTMLSelectElement>("select")');
+    expect(review).toContain("element?.options.item(element.selectedIndex)");
     expect(review).not.toContain("form.elements.namedItem(name)");
+    expect(review).not.toContain("selectedOptions");
   });
 });

@@ -30,11 +30,11 @@ export function PresenceTracker() {
       }
     };
     let timer:number|undefined;
-    void supabase.auth.getUser().then(({data})=>{
-      if(!active||!data.user)return;
+    void supabase.auth.getSession().then(({data})=>{
+      if(!active||!data.session?.user)return;
       void heartbeat();
       timer=window.setInterval(() => void heartbeat(), HEARTBEAT_MS);
-    });
+    }).catch(() => undefined);
     const onVisibility = () => { if (document.visibilityState === "visible") void heartbeat(); };
     document.addEventListener("visibilitychange", onVisibility);
     return () => {

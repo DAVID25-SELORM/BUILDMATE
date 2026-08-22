@@ -32,14 +32,17 @@ export function ConfirmInventoryAction({
     const data = new FormData(form),
       get = (name: string) => String(data.get(name) ?? ""),
       select = (name: string) =>
-        Array.from(form.elements).find(
-          (element): element is HTMLSelectElement =>
-            element instanceof HTMLSelectElement && element.name === name,
+        Array.from(form.querySelectorAll<HTMLSelectElement>("select")).find(
+          (element) => element.name === name,
         ) ?? null,
+      selectedOption = (name: string) => {
+        const element = select(name);
+        return element?.options.item(element.selectedIndex) ?? null;
+      },
       selected = (name: string) =>
-        select(name)?.selectedOptions[0]?.textContent ?? "Not selected";
+        selectedOption(name)?.textContent ?? "Not selected";
     if (kind === "receipt") {
-      const option = select("listingId")?.selectedOptions[0],
+      const option = selectedOption("listingId"),
         current = Number(option?.dataset.onHand ?? 0),
         reserved = Number(option?.dataset.reserved ?? 0),
         existingCost = Number(option?.dataset.averageCost ?? 0),
@@ -85,7 +88,7 @@ export function ConfirmInventoryAction({
     } else if (kind === "adjustment") {
       const physical = get("physicalQuantity"),
         current = Number(
-          select("listingId")?.selectedOptions[0]?.dataset.onHand ?? 0,
+          selectedOption("listingId")?.dataset.onHand ?? 0,
         );
       setLines(
         physical

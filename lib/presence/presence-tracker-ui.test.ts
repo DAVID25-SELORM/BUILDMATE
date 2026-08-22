@@ -12,5 +12,8 @@ describe("presence tracker resilience", () => {
     expect(tracker).toContain("if (error) rpcAvailable = false");
     expect(tracker).toContain("catch {");
     expect(tracker).toContain("rpcAvailable = false");
+    expect(tracker).toContain("supabase.auth.getSession()");
+    expect(tracker).toContain(".catch(() => undefined)");
+    expect(tracker).not.toContain("supabase.auth.getUser()");
   });
 });

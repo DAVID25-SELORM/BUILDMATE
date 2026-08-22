@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ProductCard } from "@/components/commerce/ProductCard";
+import { categoryImage } from "@/lib/catalogue/category-images";
 import { matchesDeliveryCoverage } from "@/lib/delivery/coverage";
 import { createClient } from "@/lib/supabase/server";
 
@@ -90,6 +92,9 @@ export default async function ShopPage({
     .eq("is_active", true)
     .order("sort_order");
   const categoryRows = categoryResult.data ?? [];
+  const topLevelCategories = categoryRows.filter(
+    (item) => item.parent_id == null,
+  );
   const selectedCategoryIds: string[] = [];
   if (category) {
     const pending = categoryRows
@@ -274,6 +279,39 @@ export default async function ShopPage({
       <p className="mt-3 text-slate-600">
         Browse verified building materials from approved suppliers across Ghana.
       </p>
+      <section id="categories" className="mt-8 scroll-mt-24">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="font-semibold text-brand-700">SHOP BY CATEGORY</p>
+            <h2 className="mt-1 text-2xl font-black">Browse the full catalogue</h2>
+          </div>
+          {category && (
+            <Link href="/shop#categories" className="text-sm font-semibold text-brand-700">
+              View all categories
+            </Link>
+          )}
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {topLevelCategories.map((item) => (
+            <Link
+              className={`card group overflow-hidden transition hover:border-brand-300 ${category === item.slug ? "ring-2 ring-brand-600" : ""}`}
+              href={`/shop?category=${encodeURIComponent(item.slug)}#materials`}
+              key={item.id}
+            >
+              <div className="relative aspect-[3/2]">
+                <Image
+                  src={`/images/categories/${categoryImage(item.slug)}`}
+                  alt=""
+                  fill
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                  className="object-cover transition duration-300 group-hover:scale-105"
+                />
+              </div>
+              <span className="block p-3 text-sm font-bold">{item.name}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
       <form
         className="mt-6 grid grid-cols-[1fr_auto] gap-3 rounded-2xl border bg-white p-4 lg:grid-cols-[2fr_1fr_auto]"
         aria-label="Marketplace filters"
@@ -291,9 +329,7 @@ export default async function ShopPage({
           <span className="sr-only">Category</span>
           <select className="input" name="category" defaultValue={category}>
             <option value="">All categories</option>
-            {categoryRows
-              .filter((item) => item.parent_id == null)
-              .map((item) => (
+            {topLevelCategories.map((item) => (
               <option key={item.slug} value={item.slug}>
                 {item.name}
               </option>
@@ -356,7 +392,7 @@ export default async function ShopPage({
           </div>
         </details>
       </form>
-      <div className="mt-8 flex flex-wrap items-end justify-between gap-3">
+      <div id="materials" className="mt-8 scroll-mt-24 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-2xl font-black">
             {hasFilters ? "Matching materials" : "Available materials"}

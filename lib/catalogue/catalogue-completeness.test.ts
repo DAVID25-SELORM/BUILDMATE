@@ -19,6 +19,10 @@ const supplierProducts = readFileSync(
   join(process.cwd(), "components", "supplier", "products", "SupplierInventoryEditor.tsx"),
   "utf8",
 );
+const home = readFileSync(
+  join(process.cwd(), "app", "(public)", "page.tsx"),
+  "utf8",
+);
 
 describe("catalogue completeness migration", () => {
   it("creates the approved customer groups and BOQ-ready canonical products", () => {
@@ -78,6 +82,14 @@ describe("catalogue user experience", () => {
     expect(shop).toContain('query = query.in(');
     expect(shop).toContain('"products.category_id"');
     expect(shop).toContain("item.parent_id == null");
+  });
+
+  it("loads live top-level categories on both public catalogue surfaces", () => {
+    expect(home).toContain('.is("parent_id", null)');
+    expect(home).toContain('href="/shop#categories"');
+    expect(shop).toContain('id="categories"');
+    expect(shop).toContain("topLevelCategories.map");
+    expect(shop).toContain("categoryImage(item.slug)");
   });
 
   it("shows category and marketplace visibility to suppliers", () => {

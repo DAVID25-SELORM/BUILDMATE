@@ -3,47 +3,21 @@ import Link from "next/link";
 import { ArrowRight, Calculator, MapPin } from "lucide-react";
 import { ProductCard } from "@/components/commerce/ProductCard";
 import { getFeaturedProducts } from "@/lib/catalogue/featured-products";
-const categories = [
-  {
-    name: "Cement & Concrete",
-    slug: "cement-concrete",
-    image: "cement-and-concrete.webp",
-  },
-  {
-    name: "Blocks & Bricks",
-    slug: "blocks-bricks",
-    image: "blocks-and-bricks.webp",
-  },
-  {
-    name: "Steel & Reinforcement",
-    slug: "steel-reinforcement",
-    image: "steel-reinforcement.webp",
-  },
-  { name: "Roofing", slug: "roofing", image: "roofing-installation.webp" },
-  { name: "Plumbing", slug: "plumbing", image: "plumbing-materials.webp" },
-  {
-    name: "Electrical",
-    slug: "electrical",
-    image: "electrical-materials.webp",
-  },
-  {
-    name: "Tiles & Flooring",
-    slug: "tiles-flooring",
-    image: "tiles-flooring.webp",
-  },
-  {
-    name: "Paint & Finishes",
-    slug: "paint-finishes",
-    image: "paint-finishes.webp",
-  },
-  {
-    name: "Tools & Equipment",
-    slug: "tools-equipment",
-    image: "tools-equipment.webp",
-  },
-];
+import { categoryImage } from "@/lib/catalogue/category-images";
+import { createClient } from "@/lib/supabase/server";
+
 export default async function HomePage() {
-  const products = await getFeaturedProducts();
+  const supabase = await createClient();
+  const [products, categoryResult] = await Promise.all([
+    getFeaturedProducts(),
+    supabase
+      .from("categories")
+      .select("id,name,slug")
+      .eq("is_active", true)
+      .is("parent_id", null)
+      .order("sort_order"),
+  ]);
+  const categories = categoryResult.data ?? [];
   return (
     <>
       <section className="relative isolate overflow-hidden bg-brand-950 text-white">
@@ -137,7 +111,7 @@ export default async function HomePage() {
             </h2>
           </div>
           <Link
-            href="/shop"
+            href="/shop#categories"
             className="hidden items-center gap-2 font-semibold text-brand-700 sm:flex"
           >
             View all <ArrowRight className="h-4 w-4" />
@@ -152,7 +126,7 @@ export default async function HomePage() {
             >
               <div className="relative aspect-[4/3]">
                 <Image
-                  src={`/images/categories/${c.image}`}
+                  src={`/images/categories/${categoryImage(c.slug)}`}
                   alt={`${c.name} construction materials`}
                   fill
                   sizes="(max-width: 768px) 50vw, 33vw"
