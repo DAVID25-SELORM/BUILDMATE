@@ -8,7 +8,7 @@ export function OpenInventoryOperationButton({
   className,
   children,
 }: {
-  operation: "receive" | "adjust" | "count" | "transfer";
+  operation: "receive" | "adjust" | "count" | "transfer" | "setup";
   listingId?: string;
   className: string;
   children: React.ReactNode;

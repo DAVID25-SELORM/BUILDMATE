@@ -9,3 +9,28 @@ supabase/.temp
 .DS_Store
 
 tsconfig.tsbuildinfo
+
+# Local document-generation dependencies and visual-QA intermediates
+tmp_documents/
+artifacts/capstone_report/pydeps/
+artifacts/capstone_report/rendered/
+artifacts/capstone_report/regent-rendered/final-pages/
+artifacts/capstone_report/regent-rendered/qa-*/
+artifacts/capstone_report/regent-rendered/page-*.png
+
+# Superseded/intermediate capstone report exports
+artifacts/capstone_report/BuildMate_Ghana_Capstone_Report.docx
+artifacts/capstone_report/BuildMate_Ghana_Regent_Capstone_Report.docx
+artifacts/capstone_report/screenshots/04-calculators-current.png
+artifacts/capstone_report/regent-rendered/BuildMate_Ghana_Regent_Capstone_Report.docx
+artifacts/capstone_report/regent-rendered/BuildMate_Ghana_Regent_Capstone_Report.pdf
+artifacts/capstone_report/regent-rendered/BuildMate_Ghana_Regent_Capstone_Report_Final.docx
+artifacts/capstone_report/regent-rendered/BuildMate_Ghana_Regent_Capstone_Report_Final.pdf
+artifacts/capstone_report/regent-rendered/BuildMate_Ghana_Regent_Capstone_Report_Final_Updated.docx
+
+# Unrelated presentation exports and Microsoft Office lock files
+artifacts/BuildLink_Ghana_*
+artifacts/pdf_review/
+artifacts/presentation_diagrams/
+artifacts/presentation_pdf_review/
+~$*

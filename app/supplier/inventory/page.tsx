@@ -315,35 +315,6 @@ export default async function SupplierInventoryPage({
           );
         })}
       </div>
-      <div className="mt-5 flex flex-wrap gap-3">
-        <Link className="btn-primary" href="/supplier/products#add-product">
-          + Add Product
-        </Link>
-        <OpenInventoryOperationButton
-          className="btn-secondary"
-          operation="receive"
-        >
-          Receive Stock
-        </OpenInventoryOperationButton>
-        <OpenInventoryOperationButton
-          className="btn-secondary"
-          operation="adjust"
-        >
-          Adjust
-        </OpenInventoryOperationButton>
-        <OpenInventoryOperationButton
-          className="btn-secondary"
-          operation="count"
-        >
-          Count
-        </OpenInventoryOperationButton>
-        <OpenInventoryOperationButton
-          className="btn-secondary"
-          operation="transfer"
-        >
-          Transfer
-        </OpenInventoryOperationButton>
-      </div>
       {(listings ?? []).some((listing) => !listing.branch_id) && (
         <form action={assignUnassignedListings} className="card mt-5 p-5">
           <h2 className="text-lg font-bold">
@@ -609,10 +580,10 @@ export default async function SupplierInventoryPage({
                 <td>
                   <OpenInventoryOperationButton
                     className="mb-2 inline-flex min-h-10 items-center rounded-xl bg-emerald-800 px-3 text-xs font-bold text-white hover:bg-emerald-900"
-                    operation="receive"
+                    operation={row.on_hand == null ? "setup" : "receive"}
                     listingId={row.listing_id}
                   >
-                    {row.on_hand == null ? "Add Stock" : "Receive Stock"}
+                    {row.on_hand == null ? "Set Up Stock" : "Receive Stock"}
                   </OpenInventoryOperationButton>
                   <details className="relative">
                     <summary className="cursor-pointer font-bold text-brand-700">

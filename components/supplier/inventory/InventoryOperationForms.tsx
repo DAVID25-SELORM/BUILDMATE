@@ -16,6 +16,7 @@ import {
 } from "@/app/supplier/inventory/actions";
 import { ConfirmInventoryAction } from "./ConfirmInventoryAction";
 import { inventoryOperationEvent } from "./OpenInventoryOperationButton";
+import { InventoryActionToolbar } from "./InventoryActionToolbar";
 
 export type InventoryListingOption = {
   id: string;
@@ -202,6 +203,7 @@ export function InventoryOperationForms({
   const setupListings = listings.filter(
     (item) => item.inventoryMode === "confirmation_required",
   );
+  const [requestedSetupId, setRequestedSetupId] = useState<string>();
   const [handledSetupIds, setHandledSetupIds] = useState<string[]>(
     setupProgress
       .filter((progress) =>
@@ -211,9 +213,12 @@ export function InventoryOperationForms({
   );
   const [setupProgressState, setSetupProgressState] =
     useState<InventoryActionState>({});
-  const setupItem = setupListings.find(
-    (item) => !handledSetupIds.includes(item.id),
-  );
+  const setupItem =
+    setupListings.find(
+      (item) =>
+        item.id === requestedSetupId && !handledSetupIds.includes(item.id),
+    ) ??
+    setupListings.find((item) => !handledSetupIds.includes(item.id));
   const setupPosition = setupItem
     ? handledSetupIds.length + 1
     : setupListings.length;
@@ -256,6 +261,7 @@ export function InventoryOperationForms({
       setRowLocked(Boolean(listingId));
       setReceiveRequestKey(crypto.randomUUID());
     }
+    if (name === "setup") setRequestedSetupId(listingId);
     dialogs.current[name]?.showModal();
   };
   const close = (name: DialogName) => dialogs.current[name]?.close();
@@ -287,76 +293,37 @@ export function InventoryOperationForms({
     // URL parameters are compatibility entry points and only open once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const toolbar = (
+    <InventoryActionToolbar
+      canReceive={canReceive}
+      canAdjust={canAdjust}
+      canTransfer={canTransfer}
+      canConfigure={canConfigure}
+      operationsEnabled={branchCount > 0}
+      onOpen={open}
+    />
+  );
   if (branchCount === 0)
     return (
-      <section className="card mt-6 border-amber-200 bg-amber-50 p-5">
-        <h2 className="text-xl font-bold text-amber-950">
-          Inventory location required
-        </h2>
-        <p className="mt-2 text-sm text-amber-900">
-          Create and configure a supplier branch before receiving, adjusting,
-          counting or transferring stock.
-        </p>
-        <a className="btn-primary mt-4 inline-block" href="/supplier/settings">
-          Configure branch
-        </a>
-      </section>
+      <>
+        {toolbar}
+        <section className="card mt-6 border-amber-200 bg-amber-50 p-5">
+          <h2 className="text-xl font-bold text-amber-950">
+            Inventory location required
+          </h2>
+          <p className="mt-2 text-sm text-amber-900">
+            Create and configure a supplier branch before receiving, adjusting,
+            counting or transferring stock.
+          </p>
+          <a className="btn-primary mt-4 inline-block" href="/supplier/settings">
+            Configure branch
+          </a>
+        </section>
+      </>
     );
   return (
     <>
-      <div className="mt-5 flex flex-wrap gap-2">
-        {canReceive && (
-          <button
-            className="btn-primary"
-            type="button"
-            onClick={() => open("receive")}
-          >
-            Receive Stock
-          </button>
-        )}
-        {canAdjust && (
-          <button
-            className="btn-secondary"
-            type="button"
-            onClick={() => open("adjust")}
-          >
-            Adjust Stock
-          </button>
-        )}
-        {canTransfer && (
-          <button
-            className="btn-secondary"
-            type="button"
-            onClick={() => open("transfer")}
-          >
-            Transfer Stock
-          </button>
-        )}
-        {canAdjust && (
-          <button
-            className="btn-secondary"
-            type="button"
-            onClick={() => open("count")}
-          >
-            Stock Count
-          </button>
-        )}
-        {canConfigure && (
-          <button
-            className="btn-secondary"
-            type="button"
-            onClick={() => open("settings")}
-          >
-            Inventory Settings
-          </button>
-        )}
-        <a
-          className="btn-secondary"
-          href="/api/supplier/inventory/export?report=current_stock"
-        >
-          Export
-        </a>
-      </div>
+      {toolbar}
       {setupListings.length > 0 && (
         <section className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5">
           <p className="text-lg font-black text-amber-950">

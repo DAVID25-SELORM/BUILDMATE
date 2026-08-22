@@ -15,10 +15,10 @@ const tools: { kind: CalculatorKind; name: string; length: string; width: string
   { kind: "plaster", name: "Plastering estimator", length: "Total wall length (m)", width: "Not used", height: "Wall height (m)" },
 ];
 const images: Record<CalculatorKind, string> = {
-  blocks: "/images/categories/blocks-and-bricks.webp", concrete: "/images/categories/cement-and-concrete.webp",
-  cement_sand: "/images/categories/cement-and-concrete.webp",
-  paint: "/images/categories/paint-finishes.webp", tiles: "/images/categories/tiles-flooring.webp",
-  roofing: "/images/categories/roofing-installation.webp", plaster: "/images/categories/blocks-and-bricks.webp",
+  blocks: "/images/categories/blocks-and-masonry-v3.webp", concrete: "/images/categories/cement-and-concrete-v3.webp",
+  cement_sand: "/images/categories/cement-and-sand-calculator-v3.webp",
+  paint: "/images/categories/paint-finishes.webp", tiles: "/images/categories/tiles-and-flooring-v3.webp",
+  roofing: "/images/categories/roofing-v3.webp", plaster: "/images/categories/ceilings-and-drywall-v2.webp",
 };
 
 export function MaterialCalculators() {
