@@ -13,6 +13,7 @@ describe("supplierNav", () => {
       { label: "Settlements", href: "/supplier/settlements" },
       { label: "Staff", href: "/supplier/staff" },
       { label: "Organisation settings", href: "/supplier/settings" },
+      { label: "Support", href: "/support" },
     ]);
   });
 

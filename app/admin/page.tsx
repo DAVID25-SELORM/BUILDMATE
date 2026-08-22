@@ -1,245 +1,60 @@
 import Link from "next/link";
+import { Building2, FileBarChart, FilePlus2, PackagePlus, Settings, ShoppingBag, UserPlus, Users, UserRoundCheck } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
-import { MetricCard } from "@/components/dashboard/MetricCard";
+import { AdminMetricCard, AdminQuickAction, AdminSectionCard, AdminStatusBadge } from "@/components/admin/AdminDashboardComponents";
 import { ADMIN_NAV } from "@/lib/admin/navigation";
 import { createClient } from "@/lib/supabase/server";
-type Point = { bucket: string; value: number };
-type Metrics = Record<string, number | Point[]>;
-function Chart({
-  title,
-  data,
-  currency = false,
-}: {
-  title: string;
-  data: Point[];
-  currency?: boolean;
-}) {
-  const max = Math.max(1, ...data.map((x) => Number(x.value)));
-  return (
-    <section className="card p-5">
-      <h2 className="font-bold">{title}</h2>
-      <div className="mt-4 flex h-40 items-end gap-2">
-        {data.map((x) => (
-          <div
-            className="group flex flex-1 flex-col items-center gap-1"
-            key={x.bucket}
-          >
-            <span className="text-[10px] opacity-0 group-hover:opacity-100">
-              {currency ? "GHS " : ""}
-              {Number(x.value).toFixed(currency ? 0 : 0)}
-            </span>
-            <div
-              className="w-full rounded-t bg-brand-600"
-              style={{
-                height: `${Math.max(4, (Number(x.value) / max) * 110)}px`,
-              }}
-            />
-            <span className="text-[9px] text-slate-500">
-              {new Date(x.bucket).toLocaleDateString(undefined, {
-                month: "short",
-              })}
-            </span>
-          </div>
-        ))}
-      </div>
-      {!data.length && (
-        <p className="mt-4 text-sm text-slate-500">No data yet.</p>
-      )}
-    </section>
-  );
+
+type Metrics = Record<string, number | { bucket: string; value: number }[]>;
+type OrderRow = { status: string; total: number | string; created_at: string };
+type AuditRow = { id: string; entity_type: string; entity_id: string; action: string; created_at: string };
+const money = (value: number) => new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(value);
+const labelize = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+function activityHref(item: AuditRow) { const routes: Record<string, string> = { order: "/admin/orders", organisation: `/admin/suppliers/${item.entity_id}`, supplier: `/admin/suppliers/${item.entity_id}`, profile: `/admin/customers/${item.entity_id}`, support_ticket: `/admin/support/${item.entity_id}`, delivery: "/admin/deliveries" }; return routes[item.entity_type]; }
+function relativeTime(value: string) { const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000)); if (minutes < 1) return "Just now"; if (minutes < 60) return `${minutes}m ago`; if (minutes < 1440) return `${Math.floor(minutes / 60)}h ago`; return `${Math.floor(minutes / 1440)}d ago`; }
+
+function OrdersChart({ orders, granularity }: { orders: OrderRow[]; granularity: "daily" | "weekly" | "monthly" }) {
+  const buckets = new Map<string, number>();
+  for (const order of orders) { const date = new Date(order.created_at); if (granularity === "weekly") date.setUTCDate(date.getUTCDate() - date.getUTCDay()); if (granularity === "monthly") date.setUTCDate(1); const key = date.toISOString().slice(0, 10); buckets.set(key, (buckets.get(key) ?? 0) + 1); }
+  const points = [...buckets].sort(([a], [b]) => a.localeCompare(b)).slice(-18);
+  const max = Math.max(1, ...points.map(([, value]) => value));
+  const coordinates = points.map(([, value], index) => `${points.length === 1 ? 50 : (index / (points.length - 1)) * 100},${94 - (value / max) * 78}`).join(" ");
+  return <div className="mt-5">{points.length ? <><svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-52 w-full" role="img" aria-label={`Orders over time, grouped ${granularity}`}><title>Orders over time</title>{[20, 40, 60, 80].map((y) => <line key={y} x1="0" x2="100" y1={y} y2={y} stroke="#e2e8f0" strokeWidth="0.4" />)}<polyline points={coordinates} fill="none" stroke="#15803d" strokeWidth="2" vectorEffect="non-scaling-stroke" /></svg><div className="flex justify-between text-[11px] text-slate-500"><span>{new Date(points[0][0]).toLocaleDateString("en-GH", { day: "numeric", month: "short" })}</span><span>{new Date(points.at(-1)![0]).toLocaleDateString("en-GH", { day: "numeric", month: "short" })}</span></div></> : <p className="flex h-52 items-center justify-center text-sm text-slate-500">No orders in this period.</p>}</div>;
 }
-function Ranking({
-  title,
-  data,
-  currency = false,
-}: {
-  title: string;
-  data: { label: string; value: number }[];
-  currency?: boolean;
-}) {
-  const max = Math.max(1, ...data.map((x) => x.value));
-  return (
-    <section className="card p-5">
-      <h2 className="font-bold">{title}</h2>
-      <div className="mt-4 space-y-3">
-        {data.map((x) => (
-          <div key={x.label}>
-            <div className="flex justify-between text-sm">
-              <span>{x.label}</span>
-              <b>
-                {currency ? "GHS " : ""}
-                {x.value.toFixed(currency ? 2 : 0)}
-              </b>
-            </div>
-            <div className="mt-1 h-2 rounded bg-slate-100">
-              <div
-                className="h-2 rounded bg-brand-600"
-                style={{ width: `${Math.max(3, (x.value / max) * 100)}%` }}
-              />
-            </div>
-          </div>
-        ))}
-        {!data.length && <p className="text-sm text-slate-500">No data yet.</p>}
-      </div>
-    </section>
-  );
-}
-function RateChart({title,value,detail}:{title:string;value:number;detail:string}){const safe=Math.min(100,Math.max(0,value));return <section className="card p-5"><h2 className="font-bold">{title}</h2><div className="mt-6 h-5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand-600" style={{width:`${safe}%`}}/></div><p className="mt-3 text-2xl font-black">{safe.toFixed(1)}%</p><p className="text-sm text-slate-500">{detail}</p></section>}
-export default async function AdminDashboard() {
-  const s = await createClient();
-  const [
-    { data, error },
-    { data: products },
-    { data: orders },
-    { data: suppliers },
-    { count: supportOpen },
-    { count: supportUrgent },
-    { count: supportUnassigned },
-    { count: supportAwaiting },
-  ] = await Promise.all([
-    s.rpc("admin_overview_metrics"),
-    s.from("products").select("categories(name)"),
-    s.from("orders").select("supplier_id,total,status"),
-    s
-      .from("organisations")
-      .select("id,name")
-      .eq("organisation_type", "supplier"),
-    s.from("support_tickets").select("id", { count: "exact", head: true }).in("status", ["open", "in_progress"]),
-    s.from("support_tickets").select("id", { count: "exact", head: true }).eq("priority", "urgent").in("status", ["open", "in_progress"]),
-    s.from("support_tickets").select("id", { count: "exact", head: true }).is("assigned_to", null).in("status", ["open", "in_progress"]),
-    s.from("support_tickets").select("id", { count: "exact", head: true }).eq("status", "open"),
+
+export default async function AdminDashboard({ searchParams }: { searchParams: Promise<{ granularity?: string }> }) {
+  const { granularity: requested } = await searchParams;
+  const granularity = (["daily", "weekly", "monthly"].includes(requested ?? "") ? requested : "daily") as "daily" | "weekly" | "monthly";
+  const supabase = await createClient(); const since = new Date(); since.setUTCMonth(since.getUTCMonth() - 12);
+  const [overview, products, ordersResult, activityResult, supportOpen, supportUrgent, supportUnassigned, supportAwaiting, ...permissions] = await Promise.all([
+    supabase.rpc("admin_overview_metrics"),
+    supabase.from("products").select("categories(name)").eq("is_active", true),
+    supabase.from("orders").select("status,total,created_at").gte("created_at", since.toISOString()).order("created_at"),
+    supabase.from("audit_logs").select("id,entity_type,entity_id,action,created_at").order("created_at", { ascending: false }).limit(8),
+    supabase.from("support_tickets").select("id", { count: "exact", head: true }).in("status", ["open", "in_progress"]),
+    supabase.from("support_tickets").select("id", { count: "exact", head: true }).eq("priority", "urgent").not("status", "in", "(resolved,closed)"),
+    supabase.from("support_tickets").select("id", { count: "exact", head: true }).is("assigned_to", null).in("status", ["open", "in_progress"]),
+    supabase.from("support_tickets").select("id", { count: "exact", head: true }).eq("status", "open"),
+    ...["customer_support", "supplier_verification", "catalogue", "reports", "settings"].map((required_permission) => supabase.rpc("admin_has_permission", { required_permission })),
   ]);
-  const categories = new Map<string, number>();
-  products?.forEach((p) => {
-    const label =
-      (p.categories as unknown as { name: string } | null)?.name ??
-      "Uncategorised";
-    categories.set(label, (categories.get(label) ?? 0) + 1);
-  });
-  const sales = new Map<string, number>();
-  orders
-    ?.filter((o) => o.status !== "cancelled")
-    .forEach((o) =>
-      sales.set(
-        o.supplier_id,
-        (sales.get(o.supplier_id) ?? 0) + Number(o.total),
-      ),
-    );
-  const supplierNames = new Map(suppliers?.map((x) => [x.id, x.name]) ?? []);
-  const m = (data ?? {}) as unknown as Metrics;
-  const card = (key: string) => Number(m[key] ?? 0);
-  return (
-    <DashboardShell title="Platform administration" nav={[...ADMIN_NAV]}>
-      <h1 className="text-3xl font-black">Platform overview</h1>
-      <p className="mt-2 text-slate-600">
-        Live customer, supplier, commerce and risk indicators.
-      </p>
-      {error && (
-        <div className="mt-5 rounded-xl bg-red-50 p-4 text-red-700">
-          Unable to load overview: {error.message}
-        </div>
-      )}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Total customers"
-          value={String(card("total_customers"))}
-          detail="Registered customer accounts"
-        />
-        <MetricCard label="Active customers" value={String(card("active_customers"))} detail="Currently permitted to transact" />
-        <MetricCard label="New customers this month" value={String(card("new_customers_month"))} detail="Month-to-date registrations" />
-        <MetricCard
-          label="Total suppliers"
-          value={String(card("total_suppliers"))}
-          detail="Registered supplier organisations"
-        />
-        <MetricCard label="Approved suppliers" value={String(card("approved_suppliers"))} detail="Verified for marketplace trading" />
-        <MetricCard label="Pending supplier applications" value={String(card("pending_suppliers"))} detail="Submitted or under review" />
-        <MetricCard
-          label="Suspended suppliers"
-          value={String(card("suspended_suppliers"))}
-          detail="Verification or account suspension"
-        />
-        <MetricCard
-          label="Total orders"
-          value={String(card("total_orders"))}
-          detail="All marketplace orders"
-        />
-        <MetricCard label="Orders in progress" value={String(card("orders_in_progress"))} detail="Active fulfilment lifecycle" />
-        <MetricCard label="Completed orders" value={String(card("completed_orders"))} detail="Successfully completed" />
-        <MetricCard
-          label="Gross merchandise value"
-          value={`GHS ${card("gmv").toFixed(2)}`}
-          detail="Non-cancelled orders"
-        />
-        <MetricCard
-          label="Platform revenue"
-          value={`GHS ${card("platform_revenue").toFixed(2)}`}
-          detail="Recorded service fees"
-        />
-        <MetricCard
-          label="Pending settlements"
-          value={`GHS ${card("pending_settlements").toFixed(2)}`}
-          detail="Pending and available ledger"
-        />
-        <MetricCard
-          label="Open disputes"
-          value={String(card("open_disputes"))}
-          detail="Require review"
-        />
-        <MetricCard
-          label="Repeat purchase rate"
-          value={`${card("repeat_purchase_rate").toFixed(1)}%`}
-          detail="Customers with multiple orders"
-        />
-        <MetricCard
-          label="Fulfilment rate"
-          value={`${card("fulfilment_rate").toFixed(1)}%`}
-          detail="Completed against all orders"
-        />
-      </div>
-      <section className="card mt-6 p-5">
-        <div className="flex items-center justify-between gap-3"><div><h2 className="text-xl font-black">Support attention</h2><p className="text-sm text-slate-600">Live requests requiring operational follow-up.</p></div><Link className="text-sm font-bold text-brand-700" href="/admin/support">Open Support →</Link></div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[["Open",supportOpen??0,"open"],["Urgent",supportUrgent??0,"urgent"],["Unassigned",supportUnassigned??0,"unassigned"],["Awaiting response",supportAwaiting??0,"open"]].map(([label,value,filter])=><Link className="rounded-xl bg-slate-50 p-4" href={`/admin/support?filter=${filter}`} key={label}><p className="text-xs font-bold uppercase text-slate-500">{label}</p><b className="mt-1 block text-2xl">{value}</b></Link>)}</div>
-      </section>
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Chart
-          title="Customer registrations"
-          data={(m.customer_registrations ?? []) as Point[]}
-        />
-        <Chart
-          title="Supplier registrations"
-          data={(m.supplier_registrations ?? []) as Point[]}
-        />
-        <Chart
-          title="Orders over time"
-          data={(m.orders_over_time ?? []) as Point[]}
-        />
-        <Chart
-          title="Sales value over time"
-          data={(m.sales_over_time ?? []) as Point[]}
-          currency
-        />
-        <Ranking
-          title="Top product categories"
-          data={[...categories]
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 8)
-            .map(([label, value]) => ({ label, value }))}
-        />
-        <Ranking
-          title="Top suppliers"
-          currency
-          data={[...sales]
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 8)
-            .map(([id, value]) => ({
-              label: supplierNames.get(id) ?? "Unknown supplier",
-              value,
-          }))}
-        />
-        <RateChart title="Customer repeat-purchase rate" value={card("repeat_purchase_rate")} detail="Customers with more than one order"/>
-        <RateChart title="Order fulfilment rate" value={card("fulfilment_rate")} detail="Completed orders against all orders"/>
-      </div>
-    </DashboardShell>
-  );
+  const metrics = (overview.data ?? {}) as Metrics; const metric = (key: string) => Number(metrics[key] ?? 0); const orders = (ordersResult.data ?? []) as OrderRow[]; const activities = (activityResult.data ?? []) as AuditRow[];
+  const categoryCounts = new Map<string, number>(); for (const product of products.data ?? []) { const category = (product.categories as unknown as { name: string } | null)?.name ?? "Uncategorised"; categoryCounts.set(category, (categoryCounts.get(category) ?? 0) + 1); }
+  const topCategories = [...categoryCounts].sort((a, b) => b[1] - a[1]).slice(0, 6); const topCategoryMax = Math.max(1, ...topCategories.map(([, count]) => count));
+  const statuses = new Map<string, number>(); for (const order of orders) statuses.set(order.status, (statuses.get(order.status) ?? 0) + 1);
+  const allowed = permissions.map((permission) => permission.data === true);
+  const quickActions = [allowed[0] && { label: "Add Customer", href: "/admin/customers", icon: UserPlus }, allowed[1] && { label: "Add Supplier", href: "/admin/supplier-applications", icon: Building2 }, allowed[2] && { label: "Add Product", href: "/admin/catalogue", icon: PackagePlus }, allowed[0] && { label: "Create Quotation", href: "/admin/quotations", icon: FilePlus2 }, allowed[3] && { label: "View Reports", href: "/admin/reports", icon: FileBarChart }, allowed[4] && { label: "System Settings", href: "/admin/settings", icon: Settings }].filter(Boolean) as { label: string; href: string; icon: typeof UserPlus }[];
+  const error = overview.error ?? products.error ?? ordersResult.error ?? activityResult.error;
+  return <DashboardShell title="Platform administration" nav={[...ADMIN_NAV]}><div className="mx-auto max-w-[1800px]">
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-2xl font-black text-slate-950">Platform overview</h1><p className="mt-1 text-sm text-slate-600">Live marketplace, customer, supplier and operational indicators.</p></div><Link href="/admin/reports" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50">Download report</Link></div>
+    {error && <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Some overview data could not be loaded: {error.message}</div>}
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"><AdminMetricCard label="Total Customers" value={String(metric("total_customers"))} detail="Registered customer accounts" icon={Users} /><AdminMetricCard label="Active Customers" value={String(metric("active_customers"))} detail="Currently permitted to transact" icon={UserRoundCheck} /><AdminMetricCard label="New Customers This Month" value={String(metric("new_customers_month"))} detail="Month-to-date registrations" icon={UserPlus} /><AdminMetricCard label="Total Suppliers" value={String(metric("total_suppliers"))} detail="Supplier organisations" icon={Building2} /><AdminMetricCard label="Total Orders" value={String(metric("total_orders"))} detail="All marketplace orders" icon={ShoppingBag} /></div>
+    <div className="mt-6 grid gap-6 2xl:grid-cols-[minmax(0,1fr)_340px]"><div className="min-w-0 space-y-6">
+      <AdminSectionCard title="Business overview"><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[["Gross merchandise value", money(metric("gmv"))], ["Platform revenue", money(metric("platform_revenue"))], ["Completed orders", String(metric("completed_orders"))], ["Orders in progress", String(metric("orders_in_progress"))]].map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-4"><p className="text-xs font-semibold text-slate-500">{label}</p><p className="mt-2 text-xl font-black tabular-nums text-slate-950">{value}</p></div>)}</div><div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5"><h3 className="font-bold text-slate-900">Orders over time</h3><div className="flex rounded-xl border border-slate-200 p-1">{(["daily", "weekly", "monthly"] as const).map((item) => <Link key={item} href={`/admin?granularity=${item}`} aria-current={granularity === item ? "page" : undefined} className={`rounded-lg px-3 py-1.5 text-xs font-bold capitalize ${granularity === item ? "bg-brand-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}>{item}</Link>)}</div></div><OrdersChart orders={orders} granularity={granularity} /></AdminSectionCard>
+      <div className="grid gap-6 xl:grid-cols-2"><AdminSectionCard title="Marketplace at a glance"><div className="mt-4 space-y-3">{["pending", "confirmed", "processing", "completed", "cancelled"].map((status) => <div key={status} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2"><AdminStatusBadge status={status} /><strong className="tabular-nums">{statuses.get(status) ?? 0}</strong></div>)}</div></AdminSectionCard><AdminSectionCard title="Top categories" action={<span className="text-xs text-slate-500">By active product count</span>}><div className="mt-4 space-y-4">{topCategories.map(([name, count], index) => <div key={name}><div className="flex justify-between gap-3 text-sm"><span className="truncate"><b className="mr-2 text-slate-400">{index + 1}</b>{name}</span><strong>{count}</strong></div><div className="mt-2 h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand-600" style={{ width: `${(count / topCategoryMax) * 100}%` }} /></div></div>)}{!topCategories.length && <p className="text-sm text-slate-500">No active products yet.</p>}</div></AdminSectionCard></div>
+    </div><aside className="space-y-6" aria-label="Operational overview">
+      <AdminSectionCard title="Support attention" action={<Link href="/admin/support" className="text-xs font-bold text-brand-700">Open Support</Link>}><div className="mt-4 grid grid-cols-2 gap-3">{[["Open", supportOpen.count ?? 0, "open"], ["Urgent", supportUrgent.count ?? 0, "urgent"], ["Unassigned", supportUnassigned.count ?? 0, "unassigned"], ["Awaiting response", supportAwaiting.count ?? 0, "open"]].map(([label, value, filter]) => <Link key={label} href={`/admin/support?filter=${filter}`} className="rounded-xl bg-slate-50 p-3 hover:bg-brand-50"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-xl font-black">{value}</p></Link>)}</div></AdminSectionCard>
+      <AdminSectionCard title="Recent activity" action={<Link href="/admin/audit-logs" className="text-xs font-bold text-brand-700">View all</Link>}><div className="mt-3 divide-y divide-slate-100">{activities.map((item) => { const href = activityHref(item); const content = <><span className="block text-sm font-semibold text-slate-800">{labelize(item.action)}</span><span className="mt-1 flex justify-between gap-3 text-xs text-slate-500"><span>{labelize(item.entity_type)}</span><time dateTime={item.created_at}>{relativeTime(item.created_at)}</time></span></>; return href ? <Link key={item.id} href={href} className="block py-3 hover:text-brand-800">{content}</Link> : <div key={item.id} className="py-3">{content}</div>; })}{!activities.length && <p className="py-4 text-sm text-slate-500">No recent activity.</p>}</div></AdminSectionCard>
+      {quickActions.length > 0 && <AdminSectionCard title="Quick actions"><div className="mt-4 grid grid-cols-2 gap-3">{quickActions.map((item) => <AdminQuickAction key={item.label} {...item} />)}</div></AdminSectionCard>}
+    </aside></div>
+  </div></DashboardShell>;
 }

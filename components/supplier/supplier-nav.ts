@@ -2,6 +2,7 @@ import {
   BarChart3,
   Boxes,
   FileText,
+  HelpCircle,
   LayoutDashboard,
   Package,
   Settings,
@@ -20,4 +21,5 @@ export const supplierNav = [
   { label: "Settlements", href: "/supplier/settlements", icon: Wallet },
   { label: "Staff", href: "/supplier/staff", icon: Users },
   { label: "Organisation settings", href: "/supplier/settings", icon: Settings },
+  { label: "Support", href: "/support", icon: HelpCircle },
 ] as const;
