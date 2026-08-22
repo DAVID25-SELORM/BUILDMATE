@@ -32,7 +32,10 @@ export function ConfirmInventoryAction({
     const data = new FormData(form),
       get = (name: string) => String(data.get(name) ?? ""),
       select = (name: string) =>
-        form.elements.namedItem(name) as HTMLSelectElement | null,
+        Array.from(form.elements).find(
+          (element): element is HTMLSelectElement =>
+            element instanceof HTMLSelectElement && element.name === name,
+        ) ?? null,
       selected = (name: string) =>
         select(name)?.selectedOptions[0]?.textContent ?? "Not selected";
     if (kind === "receipt") {

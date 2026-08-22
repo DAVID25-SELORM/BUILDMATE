@@ -13,8 +13,8 @@ import { requireSupplierPermission } from "@/lib/organisations/access";
 type ListingRow = {
   id: string;
   products:
-    | { name: string; base_unit: string }
-    | { name: string; base_unit: string }[]
+    | { name: string; base_unit: string; categories?: { name: string } | null }
+    | { name: string; base_unit: string; categories?: { name: string } | null }[]
     | null;
   product_media?: {
     id: string;
@@ -49,7 +49,7 @@ export default async function SupplierProductsPage() {
     supabase
       .from("supplier_listings")
       .select(
-        "id,product_id,product_variant_id,sku,price,currency,price_effective_date,updated_at,wholesale_price,wholesale_minimum,stock_quantity,stock_status,inventory_mode,lead_time_days,minimum_order_quantity,delivery_available,pickup_available,supplier_notes,listing_status,is_active,branch_id,warehouse_id,products(name,base_unit),product_variants(name,specifications),supplier_branches(name),product_media(id,storage_path,alt_text,is_cover,sort_order)",
+        "id,product_id,product_variant_id,sku,price,currency,price_effective_date,updated_at,wholesale_price,wholesale_minimum,stock_quantity,stock_status,inventory_mode,lead_time_days,minimum_order_quantity,delivery_available,pickup_available,supplier_notes,listing_status,is_active,branch_id,warehouse_id,products(name,base_unit,categories(name)),product_variants(name,specifications),supplier_branches(name),product_media(id,storage_path,alt_text,is_cover,sort_order)",
       )
       .eq("supplier_id", membership.organisationId)
       .order("created_at", { ascending: false }),

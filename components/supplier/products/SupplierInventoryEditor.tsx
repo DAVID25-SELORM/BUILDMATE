@@ -9,6 +9,7 @@ import {
 import {
   listingCompletion,
   listingSummary,
+  marketplaceVisibility,
 } from "@/lib/catalogue/listing-completion";
 
 type Location = {
@@ -40,8 +41,8 @@ export type InventoryListing = {
   branch_id: string | null;
   warehouse_id: string | null;
   products:
-    | { name: string; base_unit: string }
-    | { name: string; base_unit: string }[]
+    | { name: string; base_unit: string; categories?: { name: string } | null }
+    | { name: string; base_unit: string; categories?: { name: string } | null }[]
     | null;
   product_variants?:
     | { name: string; specifications: Record<string, string> }
@@ -80,6 +81,8 @@ export function SupplierInventoryEditor({
         listings.map((listing) => ({
           price: listing.price,
           stockStatus: listing.stock_status,
+          stockQuantity: listing.stock_quantity,
+          inventoryMode: listing.inventory_mode,
           deliveryAvailable: listing.delivery_available,
           pickupAvailable: listing.pickup_available,
           branchId: listing.branch_id,
@@ -242,7 +245,7 @@ export function SupplierInventoryEditor({
         </section>
       )}
       <section className="card mt-6 overflow-x-auto">
-        <table className="w-full min-w-[1180px] text-left text-sm">
+        <table className="w-full min-w-[1380px] text-left text-sm">
           <thead>
             <tr className="border-b">
               <th className="p-4">
@@ -258,10 +261,12 @@ export function SupplierInventoryEditor({
                 />
               </th>
               <th>Product / specification</th>
+              <th>Category</th>
               <th>Price (GHS)</th>
               <th>Stock quantity</th>
               <th>Availability</th>
               <th>Completion</th>
+              <th>Marketplace visibility</th>
               <th>Quick action</th>
             </tr>
           </thead>
@@ -280,6 +285,8 @@ export function SupplierInventoryEditor({
                 {
                   price: listing.price,
                   stockStatus: listing.stock_status,
+                  stockQuantity: listing.stock_quantity,
+                  inventoryMode: listing.inventory_mode,
                   deliveryAvailable: listing.delivery_available,
                   pickupAvailable: listing.pickup_available,
                   branchId: listing.branch_id,
@@ -329,6 +336,9 @@ export function SupplierInventoryEditor({
                         )}
                       </p>
                     )}
+                  </td>
+                  <td className="py-4 pr-4 text-slate-600">
+                    {product?.categories?.name ?? "Uncategorised"}
                   </td>
                   <td colSpan={3} className="py-3 pr-4">
                     {canEdit ? (
@@ -423,6 +433,18 @@ export function SupplierInventoryEditor({
                       )}
                     </div>
                   </td>
+                  <td className="py-4 pr-4 font-semibold">
+                    {marketplaceVisibility({
+                      price: listing.price,
+                      stockStatus: listing.stock_status,
+                      stockQuantity: listing.stock_quantity,
+                      inventoryMode: listing.inventory_mode,
+                      deliveryAvailable: listing.delivery_available,
+                      pickupAvailable: listing.pickup_available,
+                      branchId: listing.branch_id,
+                      listingStatus: listing.listing_status,
+                    })}
+                  </td>
                   <td className="py-4 pr-4">
                     {supplierCanPublish &&
                       (completion.published ? (
@@ -455,7 +477,7 @@ export function SupplierInventoryEditor({
             })}
             {!listings.length && (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-slate-500">
+                <td colSpan={9} className="p-8 text-center text-slate-500">
                   No product listings yet.
                 </td>
               </tr>

@@ -84,6 +84,28 @@ export default async function ShopPage({
   } = await searchParams;
   const search = q.trim();
   const supabase = await createClient();
+  const categoryResult = await supabase
+    .from("categories")
+    .select("id,parent_id,name,slug")
+    .eq("is_active", true)
+    .order("sort_order");
+  const categoryRows = categoryResult.data ?? [];
+  const selectedCategoryIds: string[] = [];
+  if (category) {
+    const pending = categoryRows
+      .filter((item) => item.slug === category)
+      .map((item) => item.id);
+    while (pending.length) {
+      const current = pending.shift()!;
+      if (selectedCategoryIds.includes(current)) continue;
+      selectedCategoryIds.push(current);
+      pending.push(
+        ...categoryRows
+          .filter((item) => item.parent_id === current)
+          .map((item) => item.id),
+      );
+    }
+  }
   const searchResult = search
     ? await supabase.rpc("public_marketplace_search_listing_ids", {
         target_query: search,
@@ -92,7 +114,7 @@ export default async function ShopPage({
   let query = supabase
     .from("supplier_listings")
     .select(
-      "id,product_id,product_variant_id,supplier_id,price,price_effective_date,price_valid_until,lead_time_days,stock_quantity,stock_status,inventory_mode,delivery_available,pickup_available,product_media(storage_path,alt_text,is_cover,sort_order),product_variants(name,is_active),supplier_branches(name,city,region),products!inner(id,name,base_unit,images,is_active,categories(name,slug)),organisations!supplier_listings_supplier_id_fkey!inner(name,verification_status,account_status,supplier_delivery_coverage(regions_served,cities_served,minimum_order_value))",
+      "id,product_id,product_variant_id,supplier_id,price,price_effective_date,price_valid_until,lead_time_days,stock_quantity,stock_status,inventory_mode,delivery_available,pickup_available,product_media(storage_path,alt_text,is_cover,sort_order),product_variants(name,is_active),supplier_branches(name,city,region),products!inner(id,category_id,name,base_unit,images,is_active,categories(name,slug)),organisations!supplier_listings_supplier_id_fkey!inner(name,verification_status,account_status,supplier_delivery_coverage(regions_served,cities_served,minimum_order_value))",
     )
     .eq("listing_status", "published")
     .eq("is_active", true)
@@ -103,15 +125,14 @@ export default async function ShopPage({
     .or("and(inventory_mode.eq.exact_quantity,stock_quantity.gt.0),and(inventory_mode.eq.status_only,stock_status.eq.in_stock)")
     .order("price");
   if (search) query = query.in("id", (searchResult.data ?? []) as string[]);
-  if (category) query = query.eq("products.categories.slug", category);
-  const [listingResult, categoryResult] = await Promise.all([
-    query,
-    supabase
-      .from("categories")
-      .select("name,slug")
-      .eq("is_active", true)
-      .order("sort_order"),
-  ]);
+  if (category)
+    query = query.in(
+      "products.category_id",
+      selectedCategoryIds.length
+        ? selectedCategoryIds
+        : ["00000000-0000-0000-0000-000000000000"],
+    );
+  const listingResult = await query;
   if (searchResult.error || listingResult.error)
     throw new Error("Marketplace catalogue is temporarily unavailable.");
 
@@ -270,11 +291,13 @@ export default async function ShopPage({
           <span className="sr-only">Category</span>
           <select className="input" name="category" defaultValue={category}>
             <option value="">All categories</option>
-            {(categoryResult.data ?? []).map((item) => (
+            {categoryRows
+              .filter((item) => item.parent_id == null)
+              .map((item) => (
               <option key={item.slug} value={item.slug}>
                 {item.name}
               </option>
-            ))}
+              ))}
           </select>
         </label>
         <button className="btn-primary">Search</button>

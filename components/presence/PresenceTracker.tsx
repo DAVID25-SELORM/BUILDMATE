@@ -14,11 +14,20 @@ export function PresenceTracker() {
     const supabase = createClient();
     sessionId.current ??= crypto.randomUUID();
     let active = true;
-    let rpcAvailable=true;
+    let rpcAvailable = true;
     const heartbeat = async () => {
       if (!active || !rpcAvailable || document.visibilityState === "hidden") return;
-      const {error}=await supabase.rpc("touch_user_presence", { target_session: sessionId.current, target_path: pathname });
-      if(error?.code==="PGRST202"||error?.message.includes("touch_user_presence"))rpcAvailable=false;
+      try {
+        const { error } = await supabase.rpc("touch_user_presence", {
+          target_session: sessionId.current,
+          target_path: pathname,
+        });
+        // Presence is non-critical. Stop retrying for this route when the RPC is
+        // unavailable or the browser cannot reach Supabase.
+        if (error) rpcAvailable = false;
+      } catch {
+        rpcAvailable = false;
+      }
     };
     let timer:number|undefined;
     void supabase.auth.getUser().then(({data})=>{

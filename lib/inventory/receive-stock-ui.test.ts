@@ -74,4 +74,10 @@ describe("receive stock interaction", () => {
       expect(forms).toContain(kind);
     }
   });
+
+  it("finds the actual select when a locked receipt has duplicate field names", () => {
+    expect(review).toContain("Array.from(form.elements).find(");
+    expect(review).toContain("element instanceof HTMLSelectElement");
+    expect(review).not.toContain("form.elements.namedItem(name)");
+  });
 });
