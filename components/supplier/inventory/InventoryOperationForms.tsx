@@ -17,6 +17,7 @@ import {
 import { ConfirmInventoryAction } from "./ConfirmInventoryAction";
 import { inventoryOperationEvent } from "./OpenInventoryOperationButton";
 import { InventoryActionToolbar } from "./InventoryActionToolbar";
+import { selectStockSetupListing } from "@/lib/inventory/stock-setup-flow";
 
 export type InventoryListingOption = {
   id: string;
@@ -204,6 +205,10 @@ export function InventoryOperationForms({
     (item) => item.inventoryMode === "confirmation_required",
   );
   const [requestedSetupId, setRequestedSetupId] = useState<string>();
+  const setupModeRef = useRef<"queue" | "single">("queue");
+  const [setupMode, setSetupMode] = useState<"queue" | "single">("queue");
+  const [completedSingleSetupId, setCompletedSingleSetupId] =
+    useState<string>();
   const [handledSetupIds, setHandledSetupIds] = useState<string[]>(
     setupProgress
       .filter((progress) =>
@@ -213,14 +218,14 @@ export function InventoryOperationForms({
   );
   const [setupProgressState, setSetupProgressState] =
     useState<InventoryActionState>({});
-  const setupItem =
-    setupListings.find(
-      (item) =>
-        item.id === requestedSetupId && !handledSetupIds.includes(item.id),
-    ) ??
-    setupListings.find((item) => !handledSetupIds.includes(item.id));
+  const setupItem = selectStockSetupListing(
+    setupListings,
+    handledSetupIds,
+    requestedSetupId,
+    completedSingleSetupId,
+  );
   const setupPosition = setupItem
-    ? handledSetupIds.length + 1
+    ? setupListings.findIndex((item) => item.id === setupItem.id) + 1
     : setupListings.length;
   const setupRequestKey = useMemo(
     () => `${setupItem?.id.slice(0, 0) ?? ""}${crypto.randomUUID()}`,
@@ -249,7 +254,9 @@ export function InventoryOperationForms({
         progress.set("status", "completed");
         const progressResult = await setStockSetupProgress(initial, progress);
         if (progressResult.error) return progressResult;
-        setHandledSetupIds((ids) => [...ids, completedId]);
+        if (setupModeRef.current === "single")
+          setCompletedSingleSetupId(completedId);
+        else setHandledSetupIds((ids) => [...ids, completedId]);
       }
       return result;
     },
@@ -261,7 +268,14 @@ export function InventoryOperationForms({
       setRowLocked(Boolean(listingId));
       setReceiveRequestKey(crypto.randomUUID());
     }
-    if (name === "setup") setRequestedSetupId(listingId);
+    if (name === "setup") {
+      const mode = listingId ? "single" : "queue";
+      setupModeRef.current = mode;
+      setSetupMode(mode);
+      setRequestedSetupId(listingId);
+      setCompletedSingleSetupId(undefined);
+      setSetupProgressState({});
+    }
     dialogs.current[name]?.showModal();
   };
   const close = (name: DialogName) => dialogs.current[name]?.close();
@@ -778,10 +792,33 @@ export function InventoryOperationForms({
       >
         {!setupItem ? (
           <div className="py-8 text-center">
-            <p className="text-xl font-black">Stock setup complete</p>
-            <p className="mt-2 text-sm text-slate-600">
-              Every saved quantity was recorded as immutable opening stock.
+            <p className="text-xl font-black">
+              {completedSingleSetupId
+                ? "Opening stock saved for the selected product"
+                : "Stock setup complete"}
             </p>
+            <p className="mt-2 text-sm text-slate-600">
+              The saved quantity was recorded as immutable opening stock. Add
+              a valid selling price and publish the draft from Products when it
+              is ready for customers.
+            </p>
+            {completedSingleSetupId && (
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                <Link
+                  className="btn-primary"
+                  href={`/supplier/products#listing-${completedSingleSetupId}`}
+                >
+                  Review and publish product
+                </Link>
+                <button
+                  className="btn-secondary"
+                  type="button"
+                  onClick={() => close("setup")}
+                >
+                  Done
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <form action={setupAction}>
@@ -882,11 +919,13 @@ export function InventoryOperationForms({
               <button className="btn-primary" disabled={setupPending}>
                 {setupPending
                   ? "Saving…"
-                  : setupPosition === setupListings.length
+                  : setupMode === "single"
+                    ? "Set Opening Stock"
+                    : setupPosition === setupListings.length
                     ? "Set Opening Stock & Finish"
                     : "Set Opening Stock & Next"}
               </button>
-              <button
+              {setupMode === "queue" && <button
                 className="btn-secondary"
                 type="button"
                 onClick={async () => {
@@ -900,7 +939,7 @@ export function InventoryOperationForms({
                 }}
               >
                 Skip
-              </button>
+              </button>}
             </div>
             <Status state={setupState} />
             <Status state={setupProgressState} />

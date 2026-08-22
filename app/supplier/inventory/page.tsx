@@ -5,6 +5,7 @@ import { SupplierPageHeader } from "@/components/supplier/SupplierPageHeader";
 import { requireSupplierPermission } from "@/lib/organisations/access";
 import { assignUnassignedListings } from "@/app/supplier/inventory/actions";
 import { OpenInventoryOperationButton } from "@/components/supplier/inventory/OpenInventoryOperationButton";
+import { marketplaceVisibility } from "@/lib/catalogue/listing-completion";
 
 type Row = {
   listing_id: string;
@@ -66,6 +67,7 @@ export default async function SupplierInventoryPage({
   const [
     { data },
     { data: listings },
+    { data: organisation },
     { data: returns },
     { data: branches },
     { data: warehouses },
@@ -81,10 +83,15 @@ export default async function SupplierInventoryPage({
     supabase
       .from("supplier_listings")
       .select(
-        "id,product_id,product_variant_id,price,stock_quantity,stock_status,inventory_mode,listing_status,is_active,branch_id,products(name,base_unit),product_variants(name),supplier_branches(name,is_main_branch),supplier_warehouses(name),product_media(storage_path,is_cover,sort_order)",
+        "id,product_id,product_variant_id,price,stock_quantity,stock_status,inventory_mode,listing_status,is_active,branch_id,delivery_available,pickup_available,products(name,base_unit),product_variants(name),supplier_branches(name,is_main_branch),supplier_warehouses(name),product_media(storage_path,is_cover,sort_order)",
       )
       .eq("supplier_id", membership.organisationId)
       .order("created_at"),
+    supabase
+      .from("organisations")
+      .select("account_status,verification_status,product_publishing_enabled")
+      .eq("id", membership.organisationId)
+      .maybeSingle(),
     supabase.rpc("inventory_return_queue", {
       target_organisation: membership.organisationId,
     }),
@@ -120,6 +127,11 @@ export default async function SupplierInventoryPage({
     summary: {},
     rows: [],
   }) as Dashboard;
+  const supplierCanPublish = Boolean(
+    organisation?.account_status === "active" &&
+      organisation?.verification_status === "approved" &&
+      organisation?.product_publishing_enabled,
+  );
   const s = dashboard.summary;
   const search = (q.search ?? "").toLowerCase();
   let rows = dashboard.rows.filter(
@@ -178,26 +190,23 @@ export default async function SupplierInventoryPage({
           listingStatus: listing.listing_status,
           branchName: branch?.name ?? null,
           branchIsMain: branch?.is_main_branch ?? false,
-          marketplace:
-            listing.listing_status === "out_of_stock"
-              ? "Hidden — No Stock"
-              : listing.listing_status !== "published"
-              ? "Hidden — Draft"
-              : listing.price == null
-                ? "Hidden — Missing Price"
-                : !listing.branch_id
-                  ? "Hidden — Missing Branch"
-                  : listing.inventory_mode === "confirmation_required"
-                    ? "Hidden — Add Stock"
-                    : listing.inventory_mode === "exact_quantity" &&
-                        Number(listing.stock_quantity ?? 0) <= 0
-                      ? "Hidden — Out of Stock"
-                      : listing.inventory_mode === "status_only" &&
-                          listing.stock_status !== "in_stock"
-                        ? "Hidden — Out of Stock"
-                        : listing.is_active
-                          ? "Visible"
-                          : "Hidden — Inactive",
+          marketplace: listing.is_active
+            ? marketplaceVisibility(
+                {
+                  price: listing.price,
+                  stockStatus: listing.stock_status,
+                  stockQuantity: listing.stock_quantity,
+                  inventoryMode: listing.inventory_mode,
+                  deliveryAvailable: listing.delivery_available,
+                  pickupAvailable: listing.pickup_available,
+                  branchId: listing.branch_id,
+                  listingStatus: listing.listing_status,
+                },
+                supplierCanPublish,
+              )
+            : listing.listing_status === "published"
+              ? "Hidden — Inactive"
+              : "Hidden — Draft",
         },
       ] as const;
     }),

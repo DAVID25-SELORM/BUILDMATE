@@ -131,6 +131,8 @@ export async function receiveStock(
     };
   revalidatePath("/supplier/inventory");
   revalidatePath(`/supplier/inventory/${listing}`);
+  revalidatePath("/supplier/products");
+  revalidatePath("/shop");
   return {
     message: `Stock received successfully. ${quantity} units were added.`,
     receiptId: result.receipt_id,
@@ -191,6 +193,8 @@ export async function setOpeningStock(
     };
   revalidatePath("/supplier/inventory");
   revalidatePath(`/supplier/inventory/${listing}`);
+  revalidatePath("/supplier/products");
+  revalidatePath("/shop");
   return {
     message: `Opening stock set successfully. ${quantity} units were added.`,
     receiptId: result.receipt_id,

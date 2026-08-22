@@ -7,7 +7,7 @@ export function canPublishListing(input: {
   deliveryAvailable: boolean;
   pickupAvailable: boolean;
 }) {
-  return input.price !== null && input.price >= 0 && input.stockStatus !== "out_of_stock" && (input.deliveryAvailable || input.pickupAvailable);
+  return input.price !== null && input.price > 0 && input.stockStatus !== "out_of_stock" && (input.deliveryAvailable || input.pickupAvailable);
 }
 
 export function listingStatusLabel(status: ListingStatus) {

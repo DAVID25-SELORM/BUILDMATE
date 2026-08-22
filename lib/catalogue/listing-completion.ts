@@ -10,7 +10,7 @@ export type ListingCompletionInput = {
 };
 
 export function listingCompletion(input: ListingCompletionInput, supplierCanPublish = true) {
-  const needsPrice = input.price == null || input.price === "" || Number(input.price) < 0;
+  const needsPrice = input.price == null || input.price === "" || Number(input.price) <= 0;
   const needsStockConfirmation = input.stockStatus === "confirmation_required";
   const hasFulfilment = input.deliveryAvailable || input.pickupAvailable;
   const needsBranch = !input.branchId;
@@ -33,7 +33,11 @@ export function listingCompletion(input: ListingCompletionInput, supplierCanPubl
   };
 }
 
-export function marketplaceVisibility(input: ListingCompletionInput) {
+export function marketplaceVisibility(
+  input: ListingCompletionInput,
+  supplierCanPublish = true,
+) {
+  if (!supplierCanPublish) return "Hidden — Supplier not approved";
   if (input.listingStatus !== "published") return "Hidden — Draft";
   if (!input.branchId) return "Hidden — No branch";
   if (input.price == null || input.price === "" || Number(input.price) <= 0)

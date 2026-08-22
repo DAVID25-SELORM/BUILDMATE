@@ -16,6 +16,7 @@ describe("supplier inventory completion", () => {
 
   it("blocks readiness for missing price, unavailable stock, fulfilment, or supplier approval", () => {
     expect(listingCompletion({ price: null, stockStatus: "in_stock", deliveryAvailable: true, pickupAvailable: true, branchId: "eca78e0f-1054-4c22-9d89-c36eba8d687c", listingStatus: "draft" }).readyToPublish).toBe(false);
+    expect(listingCompletion({ price: 0, stockStatus: "in_stock", inventoryMode: "status_only", deliveryAvailable: true, pickupAvailable: true, branchId: "eca78e0f-1054-4c22-9d89-c36eba8d687c", listingStatus: "draft" }).readyToPublish).toBe(false);
     expect(listingCompletion({ price: 20, stockStatus: "out_of_stock", deliveryAvailable: true, pickupAvailable: true, listingStatus: "draft" }).readyToPublish).toBe(false);
     expect(listingCompletion({ price: 20, stockStatus: "in_stock", deliveryAvailable: false, pickupAvailable: false, listingStatus: "draft" }).readyToPublish).toBe(false);
     expect(listingCompletion({ price: 20, stockStatus: "in_stock", deliveryAvailable: true, pickupAvailable: false, listingStatus: "draft" }, false).readyToPublish).toBe(false);
@@ -37,6 +38,7 @@ describe("supplier inventory completion", () => {
     expect(marketplaceVisibility({ ...base, inventoryMode: "exact_quantity", stockQuantity: 2 })).toBe("Visible");
     expect(marketplaceVisibility({ ...base, inventoryMode: "exact_quantity", stockQuantity: 0 })).toBe("Hidden — No stock");
     expect(marketplaceVisibility({ ...base, inventoryMode: "confirmation_required", listingStatus: "draft" })).toBe("Hidden — Draft");
+    expect(marketplaceVisibility(base, false)).toBe("Hidden — Supplier not approved");
   });
 
   it("keeps a blank price nullable for drafts and rejects it for publishing", () => {

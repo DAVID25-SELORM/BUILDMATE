@@ -35,6 +35,9 @@ export const listingSchema = z.object({
   if (value.listingStatus === "published" && value.price == null) {
     context.addIssue({ code: "custom", path: ["price"], message: "Add a retail price before publishing" });
   }
+  if (value.listingStatus === "published" && value.price !== null && value.price <= 0) {
+    context.addIssue({ code: "custom", path: ["price"], message: "Published products need a selling price greater than zero" });
+  }
   if (value.listingStatus === "published" && !value.deliveryAvailable && !value.pickupAvailable) {
     context.addIssue({ code: "custom", path: ["deliveryAvailable"], message: "Choose delivery or pickup before publishing" });
   }

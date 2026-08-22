@@ -171,7 +171,7 @@ export async function setListingActive(listingId: string, isActive: boolean) {
     const [{ data: listing }, { data: organisation }] = await Promise.all([
       supabase
         .from("supplier_listings")
-        .select("price,stock_status,delivery_available,pickup_available")
+        .select("price,stock_status,stock_quantity,inventory_mode,delivery_available,pickup_available")
         .eq("id", listingId)
         .eq("supplier_id", membership.organisationId)
         .maybeSingle(),
@@ -181,12 +181,20 @@ export async function setListingActive(listingId: string, isActive: boolean) {
         .eq("id", membership.organisationId)
         .maybeSingle(),
     ]);
-    if (!listing || listing.price == null)
+    if (!listing || listing.price == null || Number(listing.price) <= 0)
       throw new Error("Add a retail price before publishing");
     if (listing.stock_status === "out_of_stock")
       throw new Error("An out-of-stock listing cannot be published");
     if (!listing.delivery_available && !listing.pickup_available)
       throw new Error("Choose delivery or pickup before publishing");
+    if (
+      (listing.inventory_mode === "exact_quantity" &&
+        Number(listing.stock_quantity ?? 0) <= 0) ||
+      (listing.inventory_mode === "status_only" &&
+        listing.stock_status !== "in_stock") ||
+      !["exact_quantity", "status_only"].includes(listing.inventory_mode)
+    )
+      throw new Error("Set up available stock before publishing");
     if (
       !organisation ||
       organisation.account_status !== "active" ||

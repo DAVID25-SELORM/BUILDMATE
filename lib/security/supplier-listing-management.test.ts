@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const assignments = readFileSync(join(process.cwd(), "supabase", "migrations", "202608070043_assignment_level_isolation.sql"), "utf8").toLowerCase();
 const lifecycle = readFileSync(join(process.cwd(), "supabase", "migrations", "202608120050_master_catalogue_listing_lifecycle.sql"), "utf8").toLowerCase();
-const publishValidation = readFileSync(join(process.cwd(), "supabase", "migrations", "202608150054_supplier_listing_publish_validation.sql"), "utf8").toLowerCase();
+const publishValidation = readFileSync(join(process.cwd(), "supabase", "migrations", "202608220075_supplier_publish_flow_consistency.sql"), "utf8").toLowerCase();
 const variantsAndPrices = readFileSync(join(process.cwd(), "supabase", "migrations", "202608150055_supplier_variants_and_field_prices.sql"), "utf8").toLowerCase();
 
 describe("supplier listing management security", () => {
@@ -23,9 +23,11 @@ describe("supplier listing management security", () => {
 
   it("enforces publishing readiness in the database", () => {
     expect(publishValidation).toContain("new.price is null");
-    expect(publishValidation).toContain("new.stock_status = 'out_of_stock'");
-    expect(publishValidation).toContain("o.account_status = 'active'");
-    expect(publishValidation).toContain("o.verification_status = 'approved'");
+    expect(publishValidation).toContain("new.price<=0");
+    expect(publishValidation).toContain("new.inventory_mode='exact_quantity'");
+    expect(publishValidation).toContain("new.inventory_mode='status_only'");
+    expect(publishValidation).toContain("o.account_status='active'");
+    expect(publishValidation).toContain("o.verification_status='approved'");
     expect(publishValidation).toContain("o.product_publishing_enabled");
     expect(publishValidation).toContain("new.branch_id is null");
   });
