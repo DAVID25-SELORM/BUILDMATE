@@ -151,6 +151,21 @@ test("homepage search accepts product-only and empty submissions", async ({ page
   await expect(page).toHaveURL(/\/shop\?q=&location=$/);
   await expect(page.getByRole("heading", { name: "Available materials" })).toBeVisible();
 });
+test("customers can search the verified professional directory", async ({ page }) => {
+  await page.goto("/services", { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await expect(page.getByRole("heading", { name: "Find trusted professionals for your project" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Drivers & Transporters" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Masonry & Construction" })).toBeVisible();
+  await page.getByLabel("Professional or service").fill("driver");
+  await page.getByLabel("Service location").fill("Accra");
+  await page.getByRole("button", { name: "Find professionals" }).click();
+  await page.waitForURL((url) => url.searchParams.get("q") === "driver" && url.searchParams.get("location") === "Accra");
+  await expect(page.getByRole("heading", { name: "Verified professionals" })).toBeVisible();
+  const filters = new URL(page.url()).searchParams;
+  expect(filters.get("q")).toBe("driver");
+  expect(filters.get("location")).toBe("Accra");
+  await expect(page.getByText(/Operational delivery drivers appear only if separately approved/)).toBeVisible();
+});
 test("homepage categories apply canonical filters and support is always reachable", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: /Blocks & Masonry/ }).click();

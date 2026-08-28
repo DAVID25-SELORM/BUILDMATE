@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { providerMatchesLocation, providerMatchesSearch, type DiscoverableProvider } from "@/lib/services/discovery";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = {
@@ -21,15 +22,18 @@ export default async function ServicesPage({
     supabase
       .from("service_provider_profiles")
       .select(
-        "id,display_name,bio,region,city,availability_status,average_rating,review_count,completed_jobs,service_provider_categories(category_id,base_price,price_unit,service_categories(name,slug)),service_provider_skills(name)",
+        "id,display_name,bio,region,city,availability_status,average_rating,review_count,completed_jobs,service_provider_categories(category_id,base_price,price_unit,service_categories(name,slug)),service_provider_skills(name),service_provider_areas(region,city,area)",
       )
       .eq("verification_status", "approved")
       .eq("account_status", "active")
       .order("average_rating", { ascending: false }),
   ]);
+  const keyword = q.q?.trim() ?? "";
+  const location = (q.location ?? q.region)?.trim() ?? "";
   const filtered = (providers ?? []).filter(
     (provider) =>
-      (!q.region || provider.region === q.region) &&
+      providerMatchesSearch(provider as unknown as DiscoverableProvider, keyword) &&
+      providerMatchesLocation(provider as unknown as DiscoverableProvider, location) &&
       (!q.availability || provider.availability_status === q.availability) &&
       (!q.category ||
         (
@@ -51,36 +55,48 @@ export default async function ServicesPage({
           manage the full request from your dashboard.
         </p>
       </div>
-      <form className="card mt-8 grid gap-3 p-4 md:grid-cols-4">
-        <select
-          className="input"
-          name="category"
-          defaultValue={q.category ?? ""}
-        >
-          <option value="">All services</option>
-          {categories?.map((category) => (
-            <option key={category.id} value={category.slug}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-        <input
-          className="input"
-          name="region"
-          defaultValue={q.region}
-          placeholder="Region"
-        />
-        <select
-          className="input"
-          name="availability"
-          defaultValue={q.availability ?? ""}
-        >
-          <option value="">Any availability</option>
-          <option value="available">Available now</option>
-          <option value="busy">Busy</option>
-        </select>
-        <button className="btn-primary">Find providers</button>
+      <div className="mt-7 flex flex-wrap gap-2" aria-label="Popular professional categories">
+        {categories?.map((category) => (
+          <Link className={`rounded-full border px-3 py-2 text-sm font-semibold ${q.category === category.slug ? "border-brand-700 bg-brand-50 text-brand-800" : "bg-white"}`} href={`/services?category=${encodeURIComponent(category.slug)}`} key={category.id}>
+            {category.slug === "transport-delivery" ? "Drivers & Transporters" : category.name}
+          </Link>
+        ))}
+      </div>
+      <form className="card mt-5 grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-5" aria-label="Professional directory filters">
+        <label className="xl:col-span-2">
+          <span className="sr-only">Professional or service</span>
+          <input className="input" name="q" type="search" defaultValue={keyword} placeholder="Driver, mason, plumber, electrician..." />
+        </label>
+        <label>
+          <span className="sr-only">Service category</span>
+          <select className="input" name="category" defaultValue={q.category ?? ""}>
+            <option value="">All services</option>
+            {categories?.map((category) => (
+              <option key={category.id} value={category.slug}>{category.slug === "transport-delivery" ? "Drivers & Transporters" : category.name}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span className="sr-only">Service location</span>
+          <input className="input" name="location" defaultValue={location} autoComplete="address-level2" placeholder="City, area or region" />
+        </label>
+        <label>
+          <span className="sr-only">Availability</span>
+          <select className="input" name="availability" defaultValue={q.availability ?? ""}>
+            <option value="">Any availability</option>
+            <option value="available">Available now</option>
+            <option value="busy">Busy</option>
+          </select>
+        </label>
+        <button className="btn-primary md:col-span-2 xl:col-span-5" type="submit">Find professionals</button>
       </form>
+      <div className="mt-6 flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-black">Verified professionals</h2>
+          <p className="mt-1 text-sm text-slate-600">{filtered.length} approved profile{filtered.length === 1 ? "" : "s"} found. Operational delivery drivers appear only if separately approved for public transport services.</p>
+        </div>
+        {(keyword || location || q.category || q.availability) && <Link className="text-sm font-bold text-brand-700" href="/services">Clear filters</Link>}
+      </div>
       <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((provider) => {
           const services = provider.service_provider_categories as unknown as
@@ -135,8 +151,7 @@ export default async function ServicesPage({
         })}
         {!filtered.length && (
           <div className="card p-8 text-slate-600 md:col-span-2 xl:col-span-3">
-            No verified providers match these filters yet. Try a broader area or
-            service.
+            No verified professionals match these filters yet. Try a broader location or service, or request help through Support.
           </div>
         )}
       </div>

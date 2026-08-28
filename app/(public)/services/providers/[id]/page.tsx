@@ -116,12 +116,18 @@ export default async function ProviderProfilePage({
           {services.length ? (
             <form
               className="mt-5 space-y-3"
-              action={createServiceRequest.bind(
-                null,
-                provider.id,
-                services[0].category_id,
-              )}
+              action={createServiceRequest.bind(null, provider.id)}
             >
+              <label className="block">
+                <span className="label">Service needed</span>
+                <select className="input" name="categoryId" required>
+                  {services.map((service) => (
+                    <option value={service.category_id} key={service.category_id}>
+                      {service.service_categories?.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <input
                 className="input"
                 name="title"

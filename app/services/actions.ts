@@ -10,7 +10,6 @@ const text = (data: FormData, name: string) =>
 
 export async function createServiceRequest(
   providerId: string,
-  categoryId: string,
   formData: FormData,
 ) {
   await requireUser();
@@ -18,7 +17,7 @@ export async function createServiceRequest(
   const budgetText = text(formData, "budget");
   const { data, error } = await supabase.rpc("create_service_request", {
     target_provider: providerId,
-    target_category: categoryId,
+    target_category: text(formData, "categoryId"),
     target_title: text(formData, "title"),
     target_description: text(formData, "description"),
     target_region: text(formData, "region"),
