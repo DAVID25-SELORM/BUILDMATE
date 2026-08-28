@@ -55,6 +55,19 @@ export function marketplaceVisibility(
   return "Visible";
 }
 
+export function supplierMarketplaceStatus(input: ListingCompletionInput, supplierCanPublish = true) {
+  if (!supplierCanPublish) return "Awaiting Approval";
+  if (input.listingStatus === "discontinued" || input.listingStatus === "seasonal") return "Paused";
+  if (input.price == null || input.price === "" || Number(input.price) <= 0) return "Needs Price";
+  const quantity = Number(input.stockQuantity ?? 0);
+  if (input.inventoryMode === "exact_quantity" && quantity <= 0)
+    return input.listingStatus === "published" ? "Out of Stock" : "Needs Stock";
+  if (input.inventoryMode !== "exact_quantity" && !(input.inventoryMode === "status_only" && input.stockStatus === "in_stock"))
+    return "Needs Stock";
+  if (input.listingStatus !== "published") return "Draft";
+  return "Live";
+}
+
 export function listingSummary(listings: ListingCompletionInput[], supplierCanPublish = true) {
   const states = listings.map((listing) => listingCompletion(listing, supplierCanPublish));
   return {

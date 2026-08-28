@@ -245,6 +245,10 @@ export default async function ProductOffersPage({
                     unit: product.base_unit,
                     price: Number(offer.price),
                     inventoryMode: offer.inventory_mode,
+                    maxQuantity:
+                      offer.inventory_mode === "exact_quantity"
+                        ? Number(offer.stock_quantity)
+                        : undefined,
                     availabilityLabel: offer.inventory_mode === "confirmation_required" || offer.stock_status === "confirmation_required" ? "Supplier confirmation required" : undefined,
                     deliveryAvailable: offer.delivery_available,
                     pickupAvailable: offer.pickup_available,

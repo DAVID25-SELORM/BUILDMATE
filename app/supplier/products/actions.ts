@@ -4,6 +4,114 @@ import { revalidatePath } from "next/cache";
 import { requireSupplierPermission } from "@/lib/organisations/access";
 import { listingSchema } from "@/lib/catalogue/validation";
 
+export type CreateProductState = {
+  error?: string;
+  message?: string;
+  listingId?: string;
+  stockReference?: string;
+};
+
+export async function createProductForSale(
+  _: CreateProductState,
+  formData: FormData,
+): Promise<CreateProductState> {
+  const { supabase, membership } =
+    await requireSupplierPermission("products.create");
+  const uuid = /^[0-9a-f-]{36}$/i;
+  const productId = String(formData.get("productId") ?? "");
+  const variantId = String(formData.get("variantId") ?? "") || null;
+  const branchId = String(formData.get("branchId") ?? "");
+  const price = Number(formData.get("price"));
+  const quantity = Number(formData.get("quantity"));
+  const unitCost = Number(formData.get("unitCost"));
+  const publish = formData.get("intent") === "publish";
+  if (!uuid.test(productId)) return { error: "Choose a product." };
+  if (variantId && !uuid.test(variantId)) return { error: "Choose a valid variant." };
+  const location = await resolveBranch(supabase, membership.organisationId, branchId || null);
+  if (location.error || !location.branchId) return { error: location.error ?? "Choose a location." };
+  if (!Number.isFinite(price) || price <= 0) return { error: "Add a selling price." };
+  if (!Number.isFinite(quantity) || quantity <= 0) return { error: "Enter available quantity." };
+  if (!Number.isFinite(unitCost) || unitCost <= 0)
+    return { error: "Enter what you paid for one unit." };
+  if (formData.get("deliveryAvailable") !== "on" && formData.get("pickupAvailable") !== "on")
+    return { error: "Choose delivery, pickup, or both." };
+  const { data, error } = await supabase.rpc(
+    "supplier_create_product_for_sale" as never,
+    {
+      target_supplier: membership.organisationId,
+      target_product: productId,
+      target_variant: variantId,
+      target_branch: location.branchId,
+      target_price: price,
+      target_quantity: quantity,
+      target_unit_cost: unitCost,
+      target_delivery: formData.get("deliveryAvailable") === "on",
+      target_pickup: formData.get("pickupAvailable") === "on",
+      target_sku: String(formData.get("sku") ?? ""),
+      target_notes: String(formData.get("notes") ?? ""),
+      target_publish: publish,
+      target_request_key: crypto.randomUUID(),
+    } as never,
+  );
+  if (error) {
+    const duplicate = error.message.match(/\[listing:([0-9a-f-]{36})\]/i);
+    return {
+      error: error.message.replace(/ \[listing:[0-9a-f-]{36}\]/i, ""),
+      listingId: duplicate?.[1],
+    };
+  }
+  const result = (data as unknown as { listing_id: string; stock_reference: string; published: boolean }[] | null)?.[0];
+  revalidatePath("/supplier/products");
+  revalidatePath("/supplier/inventory");
+  revalidatePath("/shop");
+  return {
+    message: publish
+      ? "Product published. Customers can now see this offer."
+      : "Draft saved with opening stock recorded.",
+    listingId: result?.listing_id,
+    stockReference: result?.stock_reference,
+  };
+}
+
+export async function requestCatalogueProduct(
+  _: CreateProductState,
+  formData: FormData,
+): Promise<CreateProductState> {
+  const { user, supabase, membership } = await requireSupplierPermission("products.create");
+  const name = String(formData.get("productName") ?? "").trim();
+  const category = String(formData.get("category") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const image = formData.get("image");
+  if (name.length < 2 || category.length < 2 || description.length < 5)
+    return { error: "Enter the product name, category and a short description." };
+  let imagePath: string | null = null;
+  if (image instanceof File && image.size > 0) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(image.type))
+      return { error: "Use a JPG, PNG or WebP image." };
+    if (image.size > 5 * 1024 * 1024)
+      return { error: "Product request images must be 5 MB or smaller." };
+    const safeName = image.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-100);
+    imagePath = `${membership.organisationId}/catalogue-requests/${crypto.randomUUID()}-${safeName}`;
+    const { error: uploadError } = await supabase.storage
+      .from("product-media")
+      .upload(imagePath, image, { contentType: image.type, upsert: false });
+    if (uploadError) return { error: uploadError.message };
+  }
+  const { error } = await supabase.from("supplier_catalogue_requests" as never).insert({
+    supplier_id: membership.organisationId,
+    requested_by: user.id,
+    product_name: name,
+    category,
+    description,
+    image_path: imagePath,
+  } as never);
+  if (error) {
+    if (imagePath) await supabase.storage.from("product-media").remove([imagePath]);
+    return { error: error.message };
+  }
+  return { message: "Product request sent for BuildMate review." };
+}
+
 async function resolveBranch(
   supabase: Awaited<ReturnType<typeof requireSupplierPermission>>["supabase"],
   organisationId: string,

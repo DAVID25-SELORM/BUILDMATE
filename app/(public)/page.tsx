@@ -62,20 +62,27 @@ export default async function HomePage() {
               What building material are you looking for?
             </h2>
             <form action="/shop" className="mt-5 grid gap-3">
-              <input
-                className="input"
-                name="q"
-                placeholder="Search cement, roofing, tiles..."
-              />
-              <div className="relative">
-                <MapPin className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+              <label>
+                <span className="sr-only">Building material</span>
+                <input
+                  className="input"
+                  name="q"
+                  type="search"
+                  autoComplete="off"
+                  placeholder="Search cement, roofing, tiles..."
+                />
+              </label>
+              <label className="relative">
+                <span className="sr-only">Site location</span>
+                <MapPin aria-hidden="true" className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
                 <input
                   className="input pl-11"
                   name="location"
+                  autoComplete="address-level2"
                   placeholder="Enter site location"
                 />
-              </div>
-              <button className="btn-primary">Find materials</button>
+              </label>
+              <button className="btn-primary" type="submit">Find materials</button>
             </form>
           </div>
         </div>

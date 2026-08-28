@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { listingCompletion, listingSummary, marketplaceVisibility } from "./listing-completion";
+import { listingCompletion, listingSummary, marketplaceVisibility, supplierMarketplaceStatus } from "./listing-completion";
 import { listingSchema } from "./validation";
 
 describe("supplier inventory completion", () => {
@@ -47,5 +47,16 @@ describe("supplier inventory completion", () => {
     expect(draft.success).toBe(true);
     if (draft.success) expect(draft.data.price).toBeNull();
     expect(listingSchema.safeParse({ ...base, listingStatus: "published", isActive: true }).success).toBe(false);
+  });
+});
+
+describe("supplier marketplace language", () => {
+  const base = { price: 100, stockStatus: "in_stock", stockQuantity: 5, inventoryMode: "exact_quantity", deliveryAvailable: true, pickupAvailable: false, branchId: "branch", listingStatus: "published" };
+  it("uses simple actionable statuses", () => {
+    expect(supplierMarketplaceStatus(base)).toBe("Live");
+    expect(supplierMarketplaceStatus({ ...base, stockQuantity: 0 })).toBe("Out of Stock");
+    expect(supplierMarketplaceStatus({ ...base, price: null })).toBe("Needs Price");
+    expect(supplierMarketplaceStatus({ ...base, listingStatus: "draft" })).toBe("Draft");
+    expect(supplierMarketplaceStatus(base, false)).toBe("Awaiting Approval");
   });
 });

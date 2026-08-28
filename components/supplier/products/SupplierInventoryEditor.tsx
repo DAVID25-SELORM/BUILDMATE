@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   bulkUpdateListings,
   quickUpdateListing,
@@ -10,6 +11,7 @@ import {
   listingCompletion,
   listingSummary,
   marketplaceVisibility,
+  supplierMarketplaceStatus,
 } from "@/lib/catalogue/listing-completion";
 
 type Location = {
@@ -244,7 +246,17 @@ export function SupplierInventoryEditor({
           </form>
         </section>
       )}
-      <section className="card mt-6 overflow-x-auto">
+      <section className="mt-6 grid gap-3 md:hidden" id="product-list">
+        {listings.map((listing) => {
+          const product = Array.isArray(listing.products) ? listing.products[0] : listing.products;
+          const variant = Array.isArray(listing.product_variants) ? listing.product_variants[0] : listing.product_variants;
+          const branch = Array.isArray(listing.supplier_branches) ? listing.supplier_branches[0] : listing.supplier_branches;
+          const status = supplierMarketplaceStatus({ price: listing.price, stockStatus: listing.stock_status, stockQuantity: listing.stock_quantity, inventoryMode: listing.inventory_mode, deliveryAvailable: listing.delivery_available, pickupAvailable: listing.pickup_available, branchId: listing.branch_id, listingStatus: listing.listing_status }, supplierCanPublish);
+          return <article className="card p-5" key={listing.id}><div className="flex items-start justify-between gap-3"><div><h3 className="font-black">{product?.name}</h3>{variant && <p className="text-sm font-semibold text-brand-700">{variant.name}</p>}</div><Badge tone={status === "Live" ? "green" : status.startsWith("Needs") || status === "Out of Stock" ? "amber" : "slate"}>{status}</Badge></div><p className="mt-3 text-lg font-black">{listing.price == null ? "Price needed" : `GHS ${Number(listing.price).toFixed(2)} / ${product?.base_unit}`}</p><p className="mt-1 text-sm text-slate-600">{listing.stock_quantity ?? 0} available · {branch?.name ?? "No branch"}</p><div className="mt-4 flex flex-wrap gap-2"><a className="btn-secondary py-2" href="#advanced-listing-details">Edit</a><Link className="btn-secondary py-2" href={`/supplier/inventory?listing=${listing.id}`}>Add Stock</Link>{status === "Live" && <Link className="btn-secondary py-2" href={`/shop?listing=${listing.id}`}>View in Shop</Link>}</div></article>;
+        })}
+        {!listings.length && <div className="card p-6 text-center text-slate-500">No products yet. Add your first product below.</div>}
+      </section>
+      <section className="card mt-6 hidden overflow-x-auto md:block" id="product-list-desktop">
         <table className="w-full min-w-[1380px] text-left text-sm">
           <thead>
             <tr className="border-b">

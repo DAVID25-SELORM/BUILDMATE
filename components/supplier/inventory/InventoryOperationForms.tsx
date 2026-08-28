@@ -361,7 +361,7 @@ export function InventoryOperationForms({
       )}
 
       <InventoryDialog
-        title="Receive Stock"
+        title="Add Stock"
         dialogRef={(node) => {
           dialogs.current.receive = node;
         }}

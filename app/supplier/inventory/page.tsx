@@ -592,7 +592,7 @@ export default async function SupplierInventoryPage({
                     operation={row.on_hand == null ? "setup" : "receive"}
                     listingId={row.listing_id}
                   >
-                    {row.on_hand == null ? "Set Up Stock" : "Receive Stock"}
+                    {row.on_hand == null ? "Set Up Stock" : "+ Add Stock"}
                   </OpenInventoryOperationButton>
                   <details className="relative">
                     <summary className="cursor-pointer font-bold text-brand-700">

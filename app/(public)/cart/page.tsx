@@ -6,8 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CartItem } from "@/lib/cart/cart";
 import {
+  capQuantity,
   cartTotal,
-  normalizeQuantity,
   readCart,
   writeCart,
 } from "@/lib/cart/cart";
@@ -90,10 +90,16 @@ export default function CartPage() {
     router.push(`/dashboard/orders/${result.orders[0]}?submitted=1`);
   }
   function quantity(item: CartItem, value: number) {
+    const nextQuantity = capQuantity(value, item.maxQuantity);
+    if (value > nextQuantity) {
+      setError(`Only ${item.maxQuantity} ${item.unit} currently available.`);
+    } else {
+      setError(null);
+    }
     save(
       items.map((line) =>
         line.listingId === item.listingId
-          ? { ...line, quantity: normalizeQuantity(value) }
+          ? { ...line, quantity: nextQuantity }
           : line,
       ),
     );
@@ -189,6 +195,10 @@ export default function CartPage() {
                             type="button"
                             className="p-3"
                             aria-label={`Increase ${item.name} quantity`}
+                            disabled={
+                              item.maxQuantity != null &&
+                              item.quantity >= item.maxQuantity
+                            }
                             onClick={() => quantity(item, item.quantity + 1)}
                           >
                             <Plus className="h-4 w-4" />

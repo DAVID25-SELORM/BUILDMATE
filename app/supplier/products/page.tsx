@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { ProductMediaManager } from "@/components/commerce/ProductMediaManager";
-import { CataloguePicker } from "@/components/supplier/products/CataloguePicker";
 import { ListingForm } from "@/components/supplier/products/ListingForm";
+import { SimplifiedAddProductForm } from "@/components/supplier/products/SimplifiedAddProductForm";
 import {
   SupplierInventoryEditor,
   type InventoryListing,
@@ -40,6 +40,7 @@ export default async function SupplierProductsPage() {
     { data: canEdit },
     { data: canCreate },
     { data: canPublish },
+    { data: variants },
   ] = await Promise.all([
     supabase
       .from("products")
@@ -90,6 +91,7 @@ export default async function SupplierProductsPage() {
       target_permission: "products.publish",
       target_organisation: membership.organisationId,
     }),
+    supabase.from("product_variants").select("id,product_id,name").eq("is_active", true).order("name"),
   ]);
   const mediaListings = ((listings ?? []) as unknown as ListingRow[]).map(
     (listing) => {
@@ -159,7 +161,7 @@ export default async function SupplierProductsPage() {
         <ClarificationQueue items={clarifications} products={catalogue} />
       )}
       {canEdit === true && (
-        <details className="card mt-6 p-5">
+        <details className="card mt-6 p-5" id="advanced-listing-details">
           <summary className="cursor-pointer text-lg font-bold text-brand-800">
             Advanced listing details
           </summary>
@@ -199,18 +201,9 @@ export default async function SupplierProductsPage() {
         </details>
       )}
       {canCreate === true && (
-        <details className="mt-6" id="add-product" open={inventoryListings.length === 0}>
-          <summary className="cursor-pointer font-bold text-brand-800">
-            + Add Product from BuildMate catalogue
-          </summary>
-          <div className="mt-3">
-            <CataloguePicker
-              products={catalogue}
-              branches={branches ?? []}
-              warehouses={warehouses ?? []}
-            />
-          </div>
-        </details>
+        <div className="mt-6" id="add-product">
+          <SimplifiedAddProductForm products={catalogue} variants={variants ?? []} branches={branches ?? []} />
+        </div>
       )}
       {canEdit === true && <ProductMediaManager listings={mediaListings} />}
     </>

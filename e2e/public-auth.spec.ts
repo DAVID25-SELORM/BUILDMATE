@@ -32,7 +32,7 @@ test("protected routes redirect anonymous visitors", async ({ page }) => {
   await expect(page).toHaveURL(/\/login\?redirect=/);
 });
 test("support centre exposes ticket escalation without mobile overflow", async ({ page }) => {
-  await page.goto("/shop");
+  await page.goto("/shop", { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Get Support" }).click();
   await expect(page.getByRole("heading", { name: "How can we help?" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Still need help?" })).toBeVisible();
@@ -47,7 +47,7 @@ test("support centre exposes ticket escalation without mobile overflow", async (
 test("shop loads and filters eligible master products by default", async ({
   page,
 }) => {
-  await page.goto("/shop");
+  await page.goto("/shop", { waitUntil: "domcontentloaded" });
   await expect(
     page.getByRole("heading", { name: "Shop building materials" }),
   ).toBeVisible();
@@ -57,9 +57,7 @@ test("shop loads and filters eligible master products by default", async ({
   await expect(
     page.getByRole("heading", { name: "Louvre Glass", exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByText("Confirm availability with supplier").first(),
-  ).toBeVisible();
+  await expect(page.getByText("Available from verified suppliers").first()).toBeVisible();
   await expect(page.getByText("Kwashieman, Accra").first()).toBeVisible();
 
   await Promise.all([
@@ -76,9 +74,7 @@ test("shop loads and filters eligible master products by default", async ({
   await expect(
     page.getByRole("heading", { name: "Nana Attakorah II Ventures" }),
   ).toBeVisible();
-  await expect(
-    page.getByText("Confirm availability with supplier"),
-  ).toBeVisible();
+  await expect(page.getByText("in stock", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Add to cart" }).click();
   await expect(page.getByRole("button", { name: "Added to cart" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Cart with 1 items" })).toBeVisible();
@@ -97,13 +93,13 @@ test("shop loads and filters eligible master products by default", async ({
   const search = page.getByPlaceholder(
     "Search materials, brands or specifications",
   );
-  await search.fill("Dahoma");
+  await search.fill("Plywood");
   await page.getByRole("button", { name: "Search" }).click();
-  await expect(page).toHaveURL(/q=Dahoma/);
+  await expect(page).toHaveURL(/q=Plywood/);
   await expect(
-    page.getByRole("heading", { name: "Sawn Hardwood Timber", exact: true }),
+    page.getByRole("heading", { name: "Plywood", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Dahoma 2×6")).toBeVisible();
+  await expect(page.getByText("¾ inch")).toBeVisible();
 
   await search.fill("material-that-does-not-exist");
   await page.getByRole("button", { name: "Search" }).click();
@@ -142,11 +138,23 @@ test("homepage supplier search submits its query", async ({ page }) => {
   await page.getByPlaceholder("Enter site location").fill("Accra");
   await page.getByRole("button", { name: "Find materials" }).click();
   await expect(page).toHaveURL(/\/shop\?q=cement&location=Accra/);
+  await expect(page.getByRole("heading", { name: "Matching materials" })).toBeVisible();
+});
+test("homepage search accepts product-only and empty submissions", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Building material").fill("Cabinet Adhesive");
+  await page.getByRole("button", { name: "Find materials" }).click();
+  await expect(page).toHaveURL(/\/shop\?q=Cabinet(\+|%20)Adhesive&location=$/);
+  await expect(page.getByRole("heading", { name: "Cabinet Adhesive", exact: true })).toBeVisible();
+  await page.goto("/");
+  await page.getByRole("button", { name: "Find materials" }).click();
+  await expect(page).toHaveURL(/\/shop\?q=&location=$/);
+  await expect(page.getByRole("heading", { name: "Available materials" })).toBeVisible();
 });
 test("homepage categories apply canonical filters and support is always reachable", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: /Blocks & Bricks/ }).click();
-  await expect(page).toHaveURL(/\/shop\?category=blocks-bricks/);
+  await page.getByRole("link", { name: /Blocks & Masonry/ }).click();
+  await expect(page).toHaveURL(/\/shop\?category=blocks-masonry/);
   await expect(page.getByRole("heading", { name: "Shop building materials" })).toBeVisible();
   await page.getByRole("button", { name: "Get Support" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();

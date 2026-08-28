@@ -9,6 +9,7 @@ import {
 } from "@/app/supplier/orders/actions";
 import { setListingActive } from "@/app/supplier/products/actions";
 import { ListingForm } from "@/components/supplier/products/ListingForm";
+import { SimplifiedAddProductForm } from "@/components/supplier/products/SimplifiedAddProductForm";
 import {
   isSupplierEditableStatus,
   type ListingStatus,
@@ -454,8 +455,13 @@ export function SupplierProductsView({
         Complete drafts, publish prices and keep availability current.
       </p>
       {readOnly ? (
-        <div className="mt-6 rounded-xl bg-slate-100 p-4 text-sm font-semibold text-slate-500">
-          Adding and editing products is disabled in Admin Preview Mode.
+        <div className="mt-6">
+          <SimplifiedAddProductForm
+            readOnly
+            products={[{ id: "00000000-0000-0000-0000-000000000001", name: "Preview catalogue product", base_unit: "unit", category: "BuildMate catalogue" }]}
+            variants={[]}
+            branches={[{ id: "00000000-0000-0000-0000-000000000002", name: "Preview branch", is_main_branch: true }]}
+          />
         </div>
       ) : (
         <>
