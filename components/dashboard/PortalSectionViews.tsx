@@ -172,9 +172,9 @@ export function CustomerQuotesView({
           </p>
         </div>
         {!readOnly && (
-          <Link className="btn-primary" href="/request-quote">
+          <a className="btn-primary" data-navigation="document" href="/request-quote">
             New request
-          </Link>
+          </a>
         )}
       </div>
       <div className="mt-6 space-y-3">

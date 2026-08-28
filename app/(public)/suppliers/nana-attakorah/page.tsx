@@ -56,7 +56,7 @@ export default async function NanaAttakorahStorefront() {
             <span className="flex items-center gap-2"><Clock3 className="h-4 w-4" /> Local pickup & delivery enquiries</span>
           </div>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/request-quote?title=Nana%20Attakorah%20materials%20request&location=Kwashieman%2C%20Accra" className="btn-primary bg-white text-brand-800 hover:bg-slate-100">Request a quote <ArrowRight className="ml-2 h-4 w-4" /></Link>
+            <a href="/request-quote?title=Nana%20Attakorah%20materials%20request&location=Kwashieman%2C%20Accra" data-navigation="document" className="btn-primary bg-white text-brand-800 hover:bg-slate-100">Request a quote <ArrowRight className="ml-2 h-4 w-4" /></a>
             <a href="tel:+23324329268" className="inline-flex items-center justify-center rounded-xl border border-white/50 px-5 py-3 font-semibold hover:bg-white/10"><Phone className="mr-2 h-4 w-4" /> Call supplier</a>
           </div>
         </div>
@@ -86,12 +86,12 @@ export default async function NanaAttakorahStorefront() {
     <section className="border-t border-slate-200 bg-sand-50"><div className="container-shell py-14 sm:py-16">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div><p className="font-semibold text-brand-700">AVAILABLE ON ENQUIRY</p><h2 className="mt-2 text-3xl font-black">Additional materials observed at this supplier</h2><p className="mt-3 text-slate-600">These field-visited items are not published priced offers. Prices, quantities and exact specifications require supplier confirmation.</p></div>
-        <Link href="/request-quote?title=Nana%20Attakorah%20materials%20request&location=Kwashieman%2C%20Accra" className="btn-secondary">Request multiple items</Link>
+        <a href="/request-quote?title=Nana%20Attakorah%20materials%20request&location=Kwashieman%2C%20Accra" data-navigation="document" className="btn-secondary">Request multiple items</a>
       </div>
       <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {products.map(product => <article key={product.name} className="card group overflow-hidden">
           <div className="relative aspect-[4/3] overflow-hidden bg-slate-100"><Image src={`/images/suppliers/nana-attakorah/${product.image}`} alt={`${product.name} available at Nana Attakorah II Ventures`} fill sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 33vw" className="object-cover transition duration-500 group-hover:scale-105" /></div>
-          <div className="p-5"><p className="text-xs font-bold uppercase tracking-wider text-brand-700">{product.category}</p><h3 className="mt-2 text-xl font-bold">{product.name}</h3><p className="mt-2 text-sm text-slate-600">{product.note} · sold per {product.unit}</p><Link href={`/request-quote?title=${encodeURIComponent(`Nana Attakorah — ${product.name}`)}&materials=${encodeURIComponent(`${product.name} — quantity: `)}&location=Kwashieman%2C%20Accra`} className="mt-5 inline-flex items-center gap-2 font-bold text-brand-700 hover:text-brand-900">Ask for price <ArrowRight className="h-4 w-4" /></Link></div>
+          <div className="p-5"><p className="text-xs font-bold uppercase tracking-wider text-brand-700">{product.category}</p><h3 className="mt-2 text-xl font-bold">{product.name}</h3><p className="mt-2 text-sm text-slate-600">{product.note} · sold per {product.unit}</p><a href={`/request-quote?title=${encodeURIComponent(`Nana Attakorah — ${product.name}`)}&materials=${encodeURIComponent(`${product.name} — quantity: `)}&location=Kwashieman%2C%20Accra`} data-navigation="document" className="mt-5 inline-flex items-center gap-2 font-bold text-brand-700 hover:text-brand-900">Ask for price <ArrowRight className="h-4 w-4" /></a></div>
         </article>)}
       </div>
     </div></section>
@@ -105,6 +105,6 @@ export default async function NanaAttakorahStorefront() {
       </div>
     </section>
 
-    <section className="container-shell py-14"><div className="overflow-hidden rounded-3xl bg-brand-900 p-8 text-white md:flex md:items-center md:justify-between md:p-12"><div><p className="text-sm font-bold uppercase tracking-wider text-brand-100">Need materials for a project?</p><h2 className="mt-2 text-3xl font-black">Send your list and get a confirmed quote.</h2><p className="mt-3 max-w-2xl text-brand-100">Include quantities, sizes and delivery location for a faster response.</p></div><Link href="/request-quote?title=Nana%20Attakorah%20materials%20request&location=Kwashieman%2C%20Accra" className="mt-6 inline-flex shrink-0 rounded-xl bg-white px-6 py-3 font-bold text-brand-900 md:ml-8 md:mt-0">Start request</Link></div></section>
+    <section className="container-shell py-14"><div className="overflow-hidden rounded-3xl bg-brand-900 p-8 text-white md:flex md:items-center md:justify-between md:p-12"><div><p className="text-sm font-bold uppercase tracking-wider text-brand-100">Need materials for a project?</p><h2 className="mt-2 text-3xl font-black">Send your list and get a confirmed quote.</h2><p className="mt-3 max-w-2xl text-brand-100">Include quantities, sizes and delivery location for a faster response.</p></div><a href="/request-quote?title=Nana%20Attakorah%20materials%20request&location=Kwashieman%2C%20Accra" data-navigation="document" className="mt-6 inline-flex shrink-0 rounded-xl bg-white px-6 py-3 font-bold text-brand-900 md:ml-8 md:mt-0">Start request</a></div></section>
   </>;
 }

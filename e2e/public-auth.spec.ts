@@ -151,6 +151,27 @@ test("homepage search accepts product-only and empty submissions", async ({ page
   await expect(page).toHaveURL(/\/shop\?q=&location=$/);
   await expect(page.getByRole("heading", { name: "Available materials" })).toBeVisible();
 });
+test("quote and featured supplier links bypass RSC navigation", async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
+  const rscDestinations: string[] = [];
+  page.on("request", (request) => {
+    if (request.headers().rsc === "1") rscDestinations.push(request.url());
+  });
+
+  await page.goto("/", { waitUntil: "load" });
+  if (testInfo.project.name === "mobile") await page.getByRole("button", { name: "Open menu" }).click();
+  const quoteLink = page.getByRole("link", { name: "Request Quote", exact: true }).first();
+  await expect(quoteLink).toHaveAttribute("data-navigation", "document");
+  await Promise.all([page.waitForURL(/\/request-quote$/, { waitUntil: "load" }), quoteLink.click()]);
+  expect(rscDestinations.some((url) => url.includes("/request-quote"))).toBe(false);
+
+  await page.goto("/", { waitUntil: "load" });
+  if (testInfo.project.name === "mobile") await page.getByRole("button", { name: "Open menu" }).click();
+  const supplierLink = page.getByRole("link", { name: "Suppliers", exact: true }).first();
+  await expect(supplierLink).toHaveAttribute("data-navigation", "document");
+  await Promise.all([page.waitForURL(/\/suppliers\/nana-attakorah$/, { waitUntil: "load" }), supplierLink.click()]);
+  expect(rscDestinations.some((url) => url.includes("/suppliers/nana-attakorah"))).toBe(false);
+});
 test("customers can search the verified professional directory", async ({ page }) => {
   await page.goto("/services", { waitUntil: "domcontentloaded", timeout: 60_000 });
   await expect(page.getByRole("heading", { name: "Find trusted professionals for your project" })).toBeVisible();

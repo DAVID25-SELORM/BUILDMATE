@@ -4,12 +4,12 @@ import { CartLink } from "@/components/commerce/CartLink";
 import { MobileMenu } from "@/components/layout/MobileMenu";
 
 const links = [
-  ["Shop", "/shop"],
-  ["Services", "/services"],
-  ["Categories", "/#categories"],
-  ["Request Quote", "/request-quote"],
-  ["Calculators", "/calculators"],
-  ["Suppliers", "/suppliers/nana-attakorah"],
+  { label: "Shop", href: "/shop" },
+  { label: "Services", href: "/services" },
+  { label: "Categories", href: "/#categories" },
+  { label: "Request Quote", href: "/request-quote", documentNavigation: true },
+  { label: "Calculators", href: "/calculators" },
+  { label: "Suppliers", href: "/suppliers/nana-attakorah", documentNavigation: true },
 ];
 
 export function Header() {
@@ -20,15 +20,17 @@ export function Header() {
           <BrandLogo />
         </Link>
         <nav className="hidden items-center gap-6 lg:flex">
-          {links.map(([label, href]) => (
-            <Link
-              key={href}
-              href={href}
-              className="text-sm font-medium text-slate-700 hover:text-brand-700"
-            >
-              {label}
-            </Link>
-          ))}
+          {links.map(({ label, href, documentNavigation }) =>
+            documentNavigation ? (
+              <a key={href} href={href} data-navigation="document" className="text-sm font-medium text-slate-700 hover:text-brand-700">
+                {label}
+              </a>
+            ) : (
+              <Link key={href} href={href} className="text-sm font-medium text-slate-700 hover:text-brand-700">
+                {label}
+              </Link>
+            ),
+          )}
         </nav>
         <div className="flex items-center gap-2">
           <Link

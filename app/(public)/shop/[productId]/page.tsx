@@ -145,12 +145,13 @@ export default async function ProductOffersPage({
               Compare availability, fulfilment and lead time—not price alone.
             </p>
           </div>
-          <Link
+          <a
             href={`/request-quote?title=${encodeURIComponent(product.name)}&materials=${encodeURIComponent(`${product.name} — quantity: `)}`}
+            data-navigation="document"
             className="btn-secondary"
           >
             Request bulk quote
-          </Link>
+          </a>
         </div>
         <div className="mt-6 space-y-4">
           {offers.map((offer) => (

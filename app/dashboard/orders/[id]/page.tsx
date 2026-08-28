@@ -133,9 +133,9 @@ export default async function OrderPage({
                 <Link href="/shop" className="btn-secondary">
                   Find another supplier
                 </Link>
-                <Link href="/request-quote" className="btn-primary">
+                <a href="/request-quote" data-navigation="document" className="btn-primary">
                   Request quote
-                </Link>
+                </a>
               </div>
             </div>
           )}

@@ -20,9 +20,9 @@ export function Footer() {
             <Link href="/services" className="block">
               Find Professionals
             </Link>
-            <Link href="/request-quote" className="block">
+            <a href="/request-quote" data-navigation="document" className="block">
               Request Quote
-            </Link>
+            </a>
             <Link href="/calculators" className="block">
               Calculators
             </Link>

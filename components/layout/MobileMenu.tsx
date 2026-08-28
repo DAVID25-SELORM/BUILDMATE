@@ -3,15 +3,15 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 const links = [
-  ["Shop", "/shop"],
-  ["Services", "/services"],
-  ["Categories", "/#categories"],
-  ["Request Quote", "/request-quote"],
-  ["Calculators", "/calculators"],
-  ["Suppliers", "/suppliers/nana-attakorah"],
-  ["My Account", "/dashboard"],
-  ["Get Support", "/contact"],
-  ["Sign in", "/login"],
+  { label: "Shop", href: "/shop" },
+  { label: "Services", href: "/services" },
+  { label: "Categories", href: "/#categories" },
+  { label: "Request Quote", href: "/request-quote", documentNavigation: true },
+  { label: "Calculators", href: "/calculators" },
+  { label: "Suppliers", href: "/suppliers/nana-attakorah", documentNavigation: true },
+  { label: "My Account", href: "/dashboard" },
+  { label: "Get Support", href: "/contact" },
+  { label: "Sign in", href: "/login" },
 ];
 export function MobileMenu() {
   const [open, setOpen] = useState(false);
@@ -51,16 +51,17 @@ export function MobileMenu() {
             role="dialog"
             aria-label="Mobile navigation"
           >
-            {links.map(([label, href]) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setOpen(false)}
-                className="block rounded-xl px-4 py-3 font-semibold text-slate-800 hover:bg-brand-50 hover:text-brand-800"
-              >
-                {label}
-              </Link>
-            ))}
+            {links.map(({ label, href, documentNavigation }) =>
+              documentNavigation ? (
+                <a key={href} href={href} data-navigation="document" onClick={() => setOpen(false)} className="block rounded-xl px-4 py-3 font-semibold text-slate-800 hover:bg-brand-50 hover:text-brand-800">
+                  {label}
+                </a>
+              ) : (
+                <Link key={href} href={href} onClick={() => setOpen(false)} className="block rounded-xl px-4 py-3 font-semibold text-slate-800 hover:bg-brand-50 hover:text-brand-800">
+                  {label}
+                </Link>
+              ),
+            )}
           </div>
         </div>
       )}
