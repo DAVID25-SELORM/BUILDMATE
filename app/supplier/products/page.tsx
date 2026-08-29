@@ -247,7 +247,10 @@ export default async function SupplierProductsPage() {
       )}
       {canEdit === true && (
         <div id="product-galleries">
-          <ProductMediaManager listings={mediaListings} />
+          <ProductMediaManager
+            listings={mediaListings}
+            organisationId={membership.organisationId}
+          />
         </div>
       )}
     </>

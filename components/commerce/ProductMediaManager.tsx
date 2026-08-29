@@ -1,13 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { useActionState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
 import {
   deleteProductImage,
+  recordProductImage,
   setProductCover,
-  uploadProductImage,
   type MediaState,
 } from "@/app/supplier/products/media-actions";
+import { createClient } from "@/lib/supabase/client";
 
 export type ListingMedia = {
   id: string;
@@ -16,14 +18,88 @@ export type ListingMedia = {
   branchName: string;
   media: { id: string; url: string; altText: string; isCover: boolean }[];
 };
-const initial: MediaState = { message: "" };
+
+const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export function ProductMediaManager({
   listings,
+  organisationId,
 }: {
   listings: ListingMedia[];
+  organisationId: string;
 }) {
-  const [state, action, pending] = useActionState(uploadProductImage, initial);
+  const router = useRouter();
+  const [uploadingListing, setUploadingListing] = useState<string | null>(null);
+  const [state, setState] = useState<MediaState>({ message: "" });
+
+  async function handleUpload(
+    event: FormEvent<HTMLFormElement>,
+    listing: ListingMedia,
+  ) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const altText = String(formData.get("altText") ?? "").trim();
+    const file = formData.get("image");
+    if (!(file instanceof File) || !file.size) {
+      setState({ message: "Choose a product image." });
+      return;
+    }
+    if (!imageTypes.has(file.type)) {
+      setState({ message: "Use a JPG, PNG or WebP image." });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setState({ message: "Product images must be 5 MB or smaller." });
+      return;
+    }
+    if (altText.length < 5 || altText.length > 240) {
+      setState({ message: "Describe the image in 5–240 characters." });
+      return;
+    }
+
+    setUploadingListing(listing.id);
+    setState({ message: "" });
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-100);
+    const storagePath = `${organisationId}/${listing.id}/${crypto.randomUUID()}-${safeName}`;
+    const supabase = createClient();
+
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from("product-media")
+        .upload(storagePath, file, {
+          contentType: file.type,
+          upsert: false,
+        });
+      if (uploadError) {
+        setState({ message: uploadError.message });
+        return;
+      }
+
+      const result = await recordProductImage(listing.id, {
+        storagePath,
+        altText,
+      });
+      if (!result.ok) {
+        await supabase.storage.from("product-media").remove([storagePath]);
+        setState(result);
+        return;
+      }
+
+      form.reset();
+      setState(result);
+      router.refresh();
+    } catch {
+      await supabase.storage.from("product-media").remove([storagePath]);
+      setState({
+        message:
+          "The image could not be added. Please try again or contact support.",
+      });
+    } finally {
+      setUploadingListing(null);
+    }
+  }
+
   if (!listings.length) return null;
   return (
     <section className="card mt-6 p-6">
@@ -83,10 +159,9 @@ export function ProductMediaManager({
           </div>
           {listing.media.length < 8 && (
             <form
-              action={action}
+              onSubmit={(event) => handleUpload(event, listing)}
               className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]"
             >
-              <input type="hidden" name="listingId" value={listing.id} />
               <input
                 className="input"
                 name="altText"
@@ -102,8 +177,11 @@ export function ProductMediaManager({
                 required
                 accept="image/jpeg,image/png,image/webp"
               />
-              <button className="btn-secondary" disabled={pending}>
-                {pending ? "Uploading…" : "Add image"}
+              <button
+                className="btn-secondary"
+                disabled={uploadingListing !== null}
+              >
+                {uploadingListing === listing.id ? "Uploading…" : "Add image"}
               </button>
             </form>
           )}
@@ -112,7 +190,7 @@ export function ProductMediaManager({
       {state.message && (
         <p
           className={`mt-4 text-sm font-semibold ${state.ok ? "text-green-700" : "text-red-700"}`}
-          role="status"
+          role={state.ok ? "status" : "alert"}
         >
           {state.message}
         </p>

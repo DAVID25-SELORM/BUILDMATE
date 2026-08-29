@@ -72,6 +72,12 @@ describe("simplified supplier selling workflow", () => {
     expect(mediaManager).toContain("listing.variantName");
     expect(mediaManager).toContain("listing.branchName");
   });
+  it("uploads product media directly to protected storage before recording metadata", () => {
+    expect(mediaManager).toContain('.from("product-media")');
+    expect(mediaManager).toContain("recordProductImage(listing.id");
+    expect(mediaManager).toContain("5 * 1024 * 1024");
+    expect(mediaManager).toContain("router.refresh()");
+  });
   it("keeps product scrolling local and responsive", () => {
     expect(productList).toContain("max-h-[calc(100vh-12rem)]");
     expect(productList).toContain("overflow-auto");
