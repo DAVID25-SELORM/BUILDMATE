@@ -4,8 +4,12 @@ import { ReturnProcessing } from "@/components/supplier/inventory/ReturnProcessi
 import { SupplierPageHeader } from "@/components/supplier/SupplierPageHeader";
 import { requireSupplierPermission } from "@/lib/organisations/access";
 import { assignUnassignedListings } from "@/app/supplier/inventory/actions";
+import { setListingActive } from "@/app/supplier/products/actions";
 import { OpenInventoryOperationButton } from "@/components/supplier/inventory/OpenInventoryOperationButton";
-import { marketplaceVisibility } from "@/lib/catalogue/listing-completion";
+import {
+  listingCompletion,
+  marketplaceVisibility,
+} from "@/lib/catalogue/listing-completion";
 
 type Row = {
   listing_id: string;
@@ -129,8 +133,8 @@ export default async function SupplierInventoryPage({
   }) as Dashboard;
   const supplierCanPublish = Boolean(
     organisation?.account_status === "active" &&
-      organisation?.verification_status === "approved" &&
-      organisation?.product_publishing_enabled,
+    organisation?.verification_status === "approved" &&
+    organisation?.product_publishing_enabled,
   );
   const s = dashboard.summary;
   const search = (q.search ?? "").toLowerCase();
@@ -178,6 +182,19 @@ export default async function SupplierInventoryPage({
           Number(b.is_cover) - Number(a.is_cover) ||
           a.sort_order - b.sort_order,
       )[0];
+      const completion = listingCompletion(
+        {
+          price: listing.price,
+          stockStatus: listing.stock_status,
+          stockQuantity: listing.stock_quantity,
+          inventoryMode: listing.inventory_mode,
+          deliveryAvailable: listing.delivery_available,
+          pickupAvailable: listing.pickup_available,
+          branchId: listing.branch_id,
+          listingStatus: listing.listing_status,
+        },
+        supplierCanPublish,
+      );
       return [
         listing.id,
         {
@@ -188,6 +205,7 @@ export default async function SupplierInventoryPage({
                 .getPublicUrl(media.storage_path).data.publicUrl
             : null,
           listingStatus: listing.listing_status,
+          readyToPublish: completion.readyToPublish,
           branchName: branch?.name ?? null,
           branchIsMain: branch?.is_main_branch ?? false,
           marketplace: listing.is_active
@@ -217,8 +235,7 @@ export default async function SupplierInventoryPage({
   const options = dashboard.rows.map((row) => ({
     id: row.listing_id,
     productId: listingRecords.get(row.listing_id)?.product_id ?? "",
-    variantId:
-      listingRecords.get(row.listing_id)?.product_variant_id ?? null,
+    variantId: listingRecords.get(row.listing_id)?.product_variant_id ?? null,
     label: listingLabels.get(row.listing_id)?.label ?? row.product,
     imageUrl: listingLabels.get(row.listing_id)?.imageUrl ?? null,
     product: row.product,
@@ -231,16 +248,15 @@ export default async function SupplierInventoryPage({
     inventoryMode: row.inventory_mode,
     reorderPoint: row.reorder_point,
     branch: listingLabels.get(row.listing_id)?.branchName ?? row.branch,
-    branchIsMain:
-      listingLabels.get(row.listing_id)?.branchIsMain ?? false,
-    marketplace:
-      listingLabels.get(row.listing_id)?.marketplace ?? "Hidden",
-    listingStatus:
-      listingLabels.get(row.listing_id)?.listingStatus ?? "draft",
+    branchIsMain: listingLabels.get(row.listing_id)?.branchIsMain ?? false,
+    marketplace: listingLabels.get(row.listing_id)?.marketplace ?? "Hidden",
+    listingStatus: listingLabels.get(row.listing_id)?.listingStatus ?? "draft",
     unit:
-      (listingRecords.get(row.listing_id)?.products as unknown as {
-        base_unit?: string;
-      } | null)?.base_unit ?? null,
+      (
+        listingRecords.get(row.listing_id)?.products as unknown as {
+          base_unit?: string;
+        } | null
+      )?.base_unit ?? null,
   }));
   const singleBranch = branches?.length === 1 ? branches[0] : null;
   const hasTrackedInventory = dashboard.rows.some((row) => row.on_hand != null);
@@ -611,6 +627,21 @@ export default async function SupplierInventoryPage({
                       >
                         Edit price
                       </Link>
+                      {listingLabels.get(row.listing_id)?.readyToPublish &&
+                        listingLabels.get(row.listing_id)?.listingStatus !==
+                          "published" && (
+                          <form
+                            action={setListingActive.bind(
+                              null,
+                              row.listing_id,
+                              true,
+                            )}
+                          >
+                            <button className="block w-full rounded-lg px-3 py-2 text-left font-bold text-brand-700 hover:bg-slate-50">
+                              Publish to marketplace
+                            </button>
+                          </form>
+                        )}
                       <Link
                         className="block rounded-lg px-3 py-2 hover:bg-slate-50"
                         href={`/supplier/inventory/${row.listing_id}#movements`}
