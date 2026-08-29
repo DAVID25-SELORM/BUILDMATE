@@ -26,14 +26,25 @@ export async function createProductForSale(
   const unitCost = Number(formData.get("unitCost"));
   const publish = formData.get("intent") === "publish";
   if (!uuid.test(productId)) return { error: "Choose a product." };
-  if (variantId && !uuid.test(variantId)) return { error: "Choose a valid variant." };
-  const location = await resolveBranch(supabase, membership.organisationId, branchId || null);
-  if (location.error || !location.branchId) return { error: location.error ?? "Choose a location." };
-  if (!Number.isFinite(price) || price <= 0) return { error: "Add a selling price." };
-  if (!Number.isFinite(quantity) || quantity <= 0) return { error: "Enter available quantity." };
+  if (variantId && !uuid.test(variantId))
+    return { error: "Choose a valid variant." };
+  const location = await resolveBranch(
+    supabase,
+    membership.organisationId,
+    branchId || null,
+  );
+  if (location.error || !location.branchId)
+    return { error: location.error ?? "Choose a location." };
+  if (!Number.isFinite(price) || price <= 0)
+    return { error: "Add a selling price." };
+  if (!Number.isFinite(quantity) || quantity <= 0)
+    return { error: "Enter available quantity." };
   if (!Number.isFinite(unitCost) || unitCost <= 0)
     return { error: "Enter what you paid for one unit." };
-  if (formData.get("deliveryAvailable") !== "on" && formData.get("pickupAvailable") !== "on")
+  if (
+    formData.get("deliveryAvailable") !== "on" &&
+    formData.get("pickupAvailable") !== "on"
+  )
     return { error: "Choose delivery, pickup, or both." };
   const { data, error } = await supabase.rpc(
     "supplier_create_product_for_sale" as never,
@@ -56,11 +67,17 @@ export async function createProductForSale(
   if (error) {
     const duplicate = error.message.match(/\[listing:([0-9a-f-]{36})\]/i);
     return {
-      error: error.message.replace(/ \[listing:[0-9a-f-]{36}\]/i, ""),
+      error: duplicate
+        ? "This product is already in your product list."
+        : error.message.replace(/ \[listing:[0-9a-f-]{36}\]/i, ""),
       listingId: duplicate?.[1],
     };
   }
-  const result = (data as unknown as { listing_id: string; stock_reference: string; published: boolean }[] | null)?.[0];
+  const result = (
+    data as unknown as
+      | { listing_id: string; stock_reference: string; published: boolean }[]
+      | null
+  )?.[0];
   revalidatePath("/supplier/products");
   revalidatePath("/supplier/inventory");
   revalidatePath("/shop");
@@ -77,13 +94,16 @@ export async function requestCatalogueProduct(
   _: CreateProductState,
   formData: FormData,
 ): Promise<CreateProductState> {
-  const { user, supabase, membership } = await requireSupplierPermission("products.create");
+  const { user, supabase, membership } =
+    await requireSupplierPermission("products.create");
   const name = String(formData.get("productName") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const image = formData.get("image");
   if (name.length < 2 || category.length < 2 || description.length < 5)
-    return { error: "Enter the product name, category and a short description." };
+    return {
+      error: "Enter the product name, category and a short description.",
+    };
   let imagePath: string | null = null;
   if (image instanceof File && image.size > 0) {
     if (!["image/jpeg", "image/png", "image/webp"].includes(image.type))
@@ -97,16 +117,19 @@ export async function requestCatalogueProduct(
       .upload(imagePath, image, { contentType: image.type, upsert: false });
     if (uploadError) return { error: uploadError.message };
   }
-  const { error } = await supabase.from("supplier_catalogue_requests" as never).insert({
-    supplier_id: membership.organisationId,
-    requested_by: user.id,
-    product_name: name,
-    category,
-    description,
-    image_path: imagePath,
-  } as never);
+  const { error } = await supabase
+    .from("supplier_catalogue_requests" as never)
+    .insert({
+      supplier_id: membership.organisationId,
+      requested_by: user.id,
+      product_name: name,
+      category,
+      description,
+      image_path: imagePath,
+    } as never);
   if (error) {
-    if (imagePath) await supabase.storage.from("product-media").remove([imagePath]);
+    if (imagePath)
+      await supabase.storage.from("product-media").remove([imagePath]);
     return { error: error.message };
   }
   return { message: "Product request sent for BuildMate review." };
@@ -279,7 +302,9 @@ export async function setListingActive(listingId: string, isActive: boolean) {
     const [{ data: listing }, { data: organisation }] = await Promise.all([
       supabase
         .from("supplier_listings")
-        .select("price,stock_status,stock_quantity,inventory_mode,delivery_available,pickup_available")
+        .select(
+          "price,stock_status,stock_quantity,inventory_mode,delivery_available,pickup_available",
+        )
         .eq("id", listingId)
         .eq("supplier_id", membership.organisationId)
         .maybeSingle(),
@@ -567,12 +592,15 @@ export async function createListingDrafts(formData: FormData) {
     )
       return { error: "Choose a warehouse at the selected branch" };
   }
-  const { data, error } = await supabase.rpc("create_supplier_listing_drafts_at_location", {
-    target_supplier: membership.organisationId,
-    target_product_ids: productIds,
-    target_branch: location.branchId,
-    target_warehouse: warehouseId,
-  });
+  const { data, error } = await supabase.rpc(
+    "create_supplier_listing_drafts_at_location",
+    {
+      target_supplier: membership.organisationId,
+      target_product_ids: productIds,
+      target_branch: location.branchId,
+      target_warehouse: warehouseId,
+    },
+  );
   if (error) return { error: error.message };
   revalidatePath("/supplier/products");
   return { success: true, count: Number(data ?? 0) };

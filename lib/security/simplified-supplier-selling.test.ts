@@ -15,6 +15,18 @@ const preview = readFileSync(
   "utf8",
 );
 const inventory = readFileSync("app/supplier/inventory/page.tsx", "utf8");
+const productList = readFileSync(
+  "components/supplier/products/SupplierInventoryEditor.tsx",
+  "utf8",
+);
+const mediaManager = readFileSync(
+  "components/commerce/ProductMediaManager.tsx",
+  "utf8",
+);
+const duplicateAudit = readFileSync(
+  "supabase/tests/nana_product_identity_audit.sql",
+  "utf8",
+);
 
 describe("simplified supplier selling workflow", () => {
   it("creates listing, opening stock and publication in one transaction", () => {
@@ -26,6 +38,10 @@ describe("simplified supplier selling workflow", () => {
     expect(sql).toContain("has_permission('products.create'");
     expect(sql).toContain("member_has_branch_access");
     expect(sql).toContain("You already sell this product at");
+    expect(actions).toContain("This product is already in your product list.");
+    expect(form).toContain("Available to add");
+    expect(form).toContain("Manage product");
+    expect(form).toContain("Add stock");
   });
   it("routes missing products through an audited catalogue request", () => {
     expect(sql).toContain("supplier_catalogue_requests");
@@ -48,5 +64,18 @@ describe("simplified supplier selling workflow", () => {
     expect(inventory).toContain("listingCompletion(");
     expect(inventory).toContain(">\n                          Publish\n");
     expect(inventory).toContain("setListingActive.bind(");
+  });
+  it("renders canonical variant identity in products and listing galleries", () => {
+    expect(productList).toContain("<th>Variant</th>");
+    expect(productList).toContain("<th>SKU</th>");
+    expect(productList).toContain('variant?.name ?? "Standard"');
+    expect(mediaManager).toContain("listing.variantName");
+    expect(mediaManager).toContain("listing.branchName");
+  });
+  it("keeps the Nana duplicate audit read-only and reference-safe", () => {
+    expect(duplicateAudit).toContain("having count(*)>1");
+    expect(duplicateAudit).toContain("public.inventory_balances");
+    expect(duplicateAudit).toContain("entry_type='opening_stock'");
+    expect(duplicateAudit).not.toMatch(/\b(delete|update|insert)\b/i);
   });
 });

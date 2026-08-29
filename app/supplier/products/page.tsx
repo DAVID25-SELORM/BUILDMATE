@@ -12,10 +12,19 @@ import { requireSupplierPermission } from "@/lib/organisations/access";
 
 type ListingRow = {
   id: string;
+  product_id: string;
+  product_variant_id: string | null;
+  branch_id: string | null;
   products:
     | { name: string; base_unit: string; categories?: { name: string } | null }
-    | { name: string; base_unit: string; categories?: { name: string } | null }[]
+    | {
+        name: string;
+        base_unit: string;
+        categories?: { name: string } | null;
+      }[]
     | null;
+  product_variants?: { name: string } | { name: string }[] | null;
+  supplier_branches?: { name: string } | { name: string }[] | null;
   product_media?: {
     id: string;
     storage_path: string;
@@ -91,16 +100,28 @@ export default async function SupplierProductsPage() {
       target_permission: "products.publish",
       target_organisation: membership.organisationId,
     }),
-    supabase.from("product_variants").select("id,product_id,name").eq("is_active", true).order("name"),
+    supabase
+      .from("product_variants")
+      .select("id,product_id,name")
+      .eq("is_active", true)
+      .order("name"),
   ]);
   const mediaListings = ((listings ?? []) as unknown as ListingRow[]).map(
     (listing) => {
       const product = Array.isArray(listing.products)
         ? listing.products[0]
         : listing.products;
+      const variant = Array.isArray(listing.product_variants)
+        ? listing.product_variants[0]
+        : listing.product_variants;
+      const branch = Array.isArray(listing.supplier_branches)
+        ? listing.supplier_branches[0]
+        : listing.supplier_branches;
       return {
         id: listing.id,
-        name: product?.name ?? "Product listing",
+        productName: product?.name ?? "Product listing",
+        variantName: variant?.name ?? "Standard",
+        branchName: branch?.name ?? "Unassigned",
         media: (listing.product_media ?? [])
           .sort((a, b) => a.sort_order - b.sort_order)
           .map((item) => ({
@@ -132,7 +153,10 @@ export default async function SupplierProductsPage() {
   return (
     <>
       <div>
-        <SupplierPageHeader title="Products" description="Complete prices and stock, assign fulfilment, then publish verified offers." />
+        <SupplierPageHeader
+          title="Products"
+          description="Complete prices and stock, assign fulfilment, then publish verified offers."
+        />
         {branches?.length === 1 && (
           <p className="mt-2 text-sm font-semibold text-brand-800">
             Location: {branches[0].name}
@@ -202,7 +226,17 @@ export default async function SupplierProductsPage() {
       )}
       {canCreate === true && (
         <div className="mt-6" id="add-product">
-          <SimplifiedAddProductForm products={catalogue} variants={variants ?? []} branches={branches ?? []} />
+          <SimplifiedAddProductForm
+            products={catalogue}
+            variants={variants ?? []}
+            branches={branches ?? []}
+            existingListings={inventoryListings.map((listing) => ({
+              id: listing.id,
+              product_id: listing.product_id,
+              product_variant_id: listing.product_variant_id ?? null,
+              branch_id: listing.branch_id ?? null,
+            }))}
+          />
         </div>
       )}
       {canEdit === true && <ProductMediaManager listings={mediaListings} />}

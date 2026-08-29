@@ -96,7 +96,7 @@ describe("catalogue user experience", () => {
 
   it("shows category and marketplace visibility to suppliers", () => {
     expect(supplierProducts).toContain("Category");
-    expect(supplierProducts).toContain("Marketplace visibility");
+    expect(supplierProducts).toContain("Marketplace status");
     expect(supplierProducts).toContain("marketplaceVisibility");
   });
 });
