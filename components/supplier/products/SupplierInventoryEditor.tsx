@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   bulkUpdateListings,
-  quickUpdateListing,
   setListingActive,
 } from "@/app/supplier/products/actions";
 import {
@@ -103,13 +102,12 @@ export function SupplierInventoryEditor({
 
   const cards = [
     ["Total products", summary.total],
-    ["Draft", summary.draft],
-    ["Ready to publish", summary.ready],
-    ["Published", summary.published],
+    ["Live", summary.published],
+    [
+      "Needs attention",
+      summary.ready + summary.priceMissing + summary.stockConfirmation,
+    ],
     ["Out of stock", summary.outOfStock],
-    ["Price missing", summary.priceMissing],
-    ["Stock confirmation", summary.stockConfirmation],
-    ["Needs branch", summary.needsBranch],
   ];
 
   return (
@@ -125,19 +123,13 @@ export function SupplierInventoryEditor({
         ))}
       </div>
       {canEdit && (
-        <section className="card mt-6 p-5">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold">Bulk completion</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Select products, then assign fulfilment and lifecycle settings
-                together.
-              </p>
-            </div>
-            <b className="rounded-full bg-brand-50 px-3 py-1 text-sm text-brand-800">
+        <details className="card mt-6 p-5" open={selected.length > 0}>
+          <summary className="flex cursor-pointer items-center justify-between font-bold">
+            <span>Bulk actions</span>
+            <span className="rounded-full bg-brand-50 px-3 py-1 text-sm text-brand-800">
               {selected.length} selected
-            </b>
-          </div>
+            </span>
+          </summary>
           <form
             className="mt-4 grid gap-3 md:grid-cols-3"
             action={async (formData) => {
@@ -150,6 +142,10 @@ export function SupplierInventoryEditor({
               if (!result.error) setSelected([]);
             }}
           >
+            <p className="text-sm text-slate-600 md:col-span-3">
+              Select products, then assign fulfilment and lifecycle settings
+              together.
+            </p>
             {selected.map((id) => (
               <input key={id} type="hidden" name="listingIds" value={id} />
             ))}
@@ -248,7 +244,7 @@ export function SupplierInventoryEditor({
               </p>
             )}
           </form>
-        </section>
+        </details>
       )}
       <section className="mt-6 grid gap-3 md:hidden" id="product-list">
         {listings.map((listing) => {
@@ -274,6 +270,19 @@ export function SupplierInventoryEditor({
             },
             supplierCanPublish,
           );
+          const visibility = marketplaceVisibility(
+            {
+              price: listing.price,
+              stockStatus: listing.stock_status,
+              stockQuantity: listing.stock_quantity,
+              inventoryMode: listing.inventory_mode,
+              deliveryAvailable: listing.delivery_available,
+              pickupAvailable: listing.pickup_available,
+              branchId: listing.branch_id,
+              listingStatus: listing.listing_status,
+            },
+            supplierCanPublish,
+          );
           return (
             <article
               className="card p-5"
@@ -283,6 +292,9 @@ export function SupplierInventoryEditor({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-black">{product?.name}</h3>
+                  <p className="text-xs font-semibold uppercase text-slate-500">
+                    {product?.categories?.name ?? "Uncategorised"}
+                  </p>
                   <p className="text-sm font-semibold text-brand-700">
                     {variant?.name ?? "Standard"} ·{" "}
                     {branch?.name ?? "No branch"}
@@ -307,6 +319,9 @@ export function SupplierInventoryEditor({
               </p>
               <p className="mt-1 text-sm text-slate-600">
                 {listing.stock_quantity ?? 0} available
+              </p>
+              <p className="mt-1 text-sm font-semibold">
+                Marketplace: {visibility === "Visible" ? "Visible" : "Hidden"}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <a
@@ -340,13 +355,13 @@ export function SupplierInventoryEditor({
         )}
       </section>
       <section
-        className="card mt-6 hidden overflow-x-auto md:block"
+        className="card mt-6 hidden max-h-[calc(100vh-12rem)] min-w-0 overflow-auto overscroll-contain md:block"
         id="product-list-desktop"
       >
-        <table className="w-full min-w-[1650px] text-left text-sm">
-          <thead>
-            <tr className="border-b">
-              <th className="p-4">
+        <table className="w-full min-w-[1050px] border-separate border-spacing-0 text-left text-sm">
+          <thead className="sticky top-0 z-30 bg-white shadow-sm">
+            <tr>
+              <th className="sticky left-0 z-40 border-b bg-white p-4">
                 <input
                   aria-label="Select all products"
                   type="checkbox"
@@ -356,19 +371,18 @@ export function SupplierInventoryEditor({
                       allSelected ? [] : listings.map((listing) => listing.id),
                     )
                   }
-                />
+                />{" "}
+                <span className="ml-2">Product</span>
               </th>
-              <th>Product</th>
-              <th>Variant</th>
-              <th>SKU</th>
-              <th>Branch</th>
-              <th>Category</th>
-              <th>Selling price (GHS)</th>
-              <th>Available stock</th>
-              <th>Availability</th>
-              <th>Completion</th>
-              <th>Marketplace status</th>
-              <th>Actions</th>
+              <th className="border-b p-4">Variant</th>
+              <th className="border-b p-4">Category</th>
+              <th className="border-b p-4">Price</th>
+              <th className="border-b p-4">Available stock</th>
+              <th className="border-b p-4">Status</th>
+              <th className="border-b p-4">Marketplace status</th>
+              <th className="sticky right-0 z-40 border-b bg-white p-4">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -395,191 +409,166 @@ export function SupplierInventoryEditor({
                 },
                 supplierCanPublish,
               );
+              const status = supplierMarketplaceStatus(
+                {
+                  price: listing.price,
+                  stockStatus: listing.stock_status,
+                  stockQuantity: listing.stock_quantity,
+                  inventoryMode: listing.inventory_mode,
+                  deliveryAvailable: listing.delivery_available,
+                  pickupAvailable: listing.pickup_available,
+                  branchId: listing.branch_id,
+                  listingStatus: listing.listing_status,
+                },
+                supplierCanPublish,
+              );
+              const visibility = marketplaceVisibility(
+                {
+                  price: listing.price,
+                  stockStatus: listing.stock_status,
+                  stockQuantity: listing.stock_quantity,
+                  inventoryMode: listing.inventory_mode,
+                  deliveryAvailable: listing.delivery_available,
+                  pickupAvailable: listing.pickup_available,
+                  branchId: listing.branch_id,
+                  listingStatus: listing.listing_status,
+                },
+                supplierCanPublish,
+              );
               return (
                 <tr
                   className="border-b align-top last:border-0"
                   id={`listing-${listing.id}`}
                   key={listing.id}
                 >
-                  <td className="p-4">
-                    <input
-                      aria-label={`Select ${product?.name ?? "product"}`}
-                      type="checkbox"
-                      checked={selected.includes(listing.id)}
-                      onChange={(event) =>
-                        setSelected(
-                          event.target.checked
-                            ? [...selected, listing.id]
-                            : selected.filter((id) => id !== listing.id),
-                        )
-                      }
-                    />
+                  <td className="sticky left-0 z-10 border-b bg-white p-4">
+                    <label className="flex items-start gap-3">
+                      <input
+                        aria-label={`Select ${product?.name ?? "product"}`}
+                        type="checkbox"
+                        checked={selected.includes(listing.id)}
+                        onChange={(event) =>
+                          setSelected(
+                            event.target.checked
+                              ? [...selected, listing.id]
+                              : selected.filter((id) => id !== listing.id),
+                          )
+                        }
+                      />
+                      <span>
+                        <b>{product?.name}</b>
+                        <small className="mt-1 block text-slate-500">
+                          {branch?.name ?? "No branch"} ·{" "}
+                          {listing.sku ?? "No SKU"}
+                        </small>
+                      </span>
+                    </label>
                   </td>
-                  <td className="py-4 pr-4">
-                    <b>{product?.name}</b>
-                    <p className="mt-1 text-xs text-slate-500">
-                      per {product?.base_unit}
-                    </p>
-                    <p className="mt-1 text-xs capitalize text-slate-500">
-                      {listing.listing_status.replaceAll("_", " ")}
-                    </p>
-                    {listing.price_effective_date && (
-                      <p className="mt-1 text-xs text-slate-500">
-                        Price effective{" "}
-                        {new Intl.DateTimeFormat("en-GH", {
-                          dateStyle: "medium",
-                        }).format(
-                          new Date(`${listing.price_effective_date}T00:00:00Z`),
-                        )}
-                      </p>
-                    )}
-                  </td>
-                  <td className="py-4 pr-4 font-semibold text-brand-700">
+                  <td className="border-b p-4 font-semibold text-brand-700">
                     {variant?.name ?? "Standard"}
                   </td>
-                  <td className="py-4 pr-4">{listing.sku ?? "No SKU"}</td>
-                  <td className="py-4 pr-4">{branch?.name ?? "No branch"}</td>
-                  <td className="py-4 pr-4 text-slate-600">
+                  <td className="border-b p-4 text-slate-600">
                     {product?.categories?.name ?? "Uncategorised"}
                   </td>
-                  <td colSpan={3} className="py-3 pr-4">
-                    {canEdit ? (
-                      <form
-                        className="grid grid-cols-[140px_190px] gap-2"
-                        action={async (formData) => {
-                          setPending(true);
-                          const result = await quickUpdateListing(
-                            listing.id,
-                            formData,
-                          );
-                          setPending(false);
-                          setMessage(
-                            result.error ?? `${product?.name} updated`,
-                          );
-                        }}
-                      >
-                        <input
-                          aria-label={`${product?.name} price`}
-                          className="input py-2"
-                          name="price"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          defaultValue={listing.price ?? ""}
-                          placeholder="Add price"
-                        />
-                        {listing.inventory_mode === "exact_quantity" ? (
-                          <div className="rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-600">
-                            Movement controlled
-                          </div>
-                        ) : (
-                          <select
-                            aria-label={`${product?.name} stock status`}
-                            className="input py-2"
-                            name="stockStatus"
-                            defaultValue={listing.stock_status}
-                          >
-                            {stockOptions.map(([value, label]) => (
-                              <option key={value} value={value}>
-                                {label}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                        <input
-                          type="hidden"
-                          name="stockStatus"
-                          value={listing.stock_status}
-                        />
-                        <button
-                          className="btn-secondary col-span-2 py-2"
-                          disabled={pending}
-                        >
-                          Save price and availability
-                        </button>
-                      </form>
+                  <td className="border-b p-4 font-bold">
+                    {listing.price == null
+                      ? "Needs price"
+                      : `GHS ${Number(listing.price).toFixed(2)} / ${product?.base_unit}`}
+                  </td>
+                  <td className="border-b p-4">
+                    {listing.inventory_mode === "exact_quantity"
+                      ? (listing.stock_quantity ?? 0)
+                      : listing.stock_status === "in_stock"
+                        ? "Available"
+                        : "Needs stock setup"}
+                  </td>
+                  <td className="border-b p-4">
+                    <Badge
+                      tone={
+                        status === "Live"
+                          ? "green"
+                          : status.startsWith("Needs") ||
+                              status === "Out of Stock"
+                            ? "amber"
+                            : "slate"
+                      }
+                    >
+                      {status}
+                    </Badge>
+                  </td>
+                  <td className="border-b p-4 font-semibold">
+                    {visibility === "Visible" ? (
+                      <Badge tone="green">Visible</Badge>
                     ) : (
-                      <div className="grid grid-cols-3 gap-3 text-sm">
-                        <span>
-                          {listing.price == null
-                            ? "No price"
-                            : `GHS ${Number(listing.price).toFixed(2)}`}
-                        </span>
-                        <span>{listing.stock_quantity ?? "Not tracked"}</span>
-                        <span className="capitalize">
-                          {listing.stock_status.replaceAll("_", " ")}
-                        </span>
-                      </div>
+                      <Badge tone="amber">Hidden</Badge>
                     )}
                   </td>
-                  <td className="py-4 pr-4">
-                    <div className="flex max-w-44 flex-wrap gap-1">
-                      {completion.published ? (
-                        <Badge tone="green">Published</Badge>
-                      ) : completion.readyToPublish ? (
-                        <Badge tone="green">Ready to publish</Badge>
-                      ) : (
-                        <Badge>Draft</Badge>
-                      )}
-                      {completion.needsPrice && (
-                        <Badge tone="amber">Needs price</Badge>
-                      )}
-                      {completion.needsAvailability && (
-                        <Badge tone="amber">Needs availability</Badge>
-                      )}
-                      {completion.needsBranch && (
-                        <Badge tone="amber">Needs branch</Badge>
-                      )}
-                      {completion.needsStockConfirmation && (
-                        <Badge tone="amber">Confirm availability</Badge>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-4 pr-4 font-semibold">
-                    {marketplaceVisibility({
-                      price: listing.price,
-                      stockStatus: listing.stock_status,
-                      stockQuantity: listing.stock_quantity,
-                      inventoryMode: listing.inventory_mode,
-                      deliveryAvailable: listing.delivery_available,
-                      pickupAvailable: listing.pickup_available,
-                      branchId: listing.branch_id,
-                      listingStatus: listing.listing_status,
-                    })}
-                  </td>
-                  <td className="py-4 pr-4">
-                    {supplierCanPublish &&
-                      (completion.published ? (
-                        <form
-                          action={setListingActive.bind(
-                            null,
-                            listing.id,
-                            false,
-                          )}
+                  <td className="sticky right-0 z-10 border-b bg-white p-4">
+                    <details className="relative">
+                      <summary className="cursor-pointer rounded-lg border px-3 py-2 font-bold text-brand-700">
+                        Manage
+                      </summary>
+                      <div className="absolute right-0 z-50 mt-2 w-48 rounded-xl border bg-white p-2 shadow-xl">
+                        <a
+                          className="block rounded-lg px-3 py-2 hover:bg-slate-50"
+                          href={`#advanced-listing-${listing.id}`}
                         >
-                          <button className="font-bold text-brand-700">
-                            Move to draft
-                          </button>
-                        </form>
-                      ) : (
-                        <form
-                          action={setListingActive.bind(null, listing.id, true)}
+                          Edit details
+                        </a>
+                        <a
+                          className="block rounded-lg px-3 py-2 hover:bg-slate-50"
+                          href="#product-galleries"
                         >
-                          <button
-                            className="font-bold text-brand-700 disabled:text-slate-400"
-                            disabled={!completion.readyToPublish}
-                          >
-                            Publish
-                          </button>
-                        </form>
-                      ))}
+                          Manage images
+                        </a>
+                        <Link
+                          className="block rounded-lg px-3 py-2 hover:bg-slate-50"
+                          href={`/supplier/inventory?listing=${listing.id}`}
+                        >
+                          Add stock
+                        </Link>
+                        {supplierCanPublish &&
+                          (completion.published ? (
+                            <form
+                              action={setListingActive.bind(
+                                null,
+                                listing.id,
+                                false,
+                              )}
+                            >
+                              <button className="w-full rounded-lg px-3 py-2 text-left hover:bg-slate-50">
+                                Pause selling
+                              </button>
+                            </form>
+                          ) : (
+                            <form
+                              action={setListingActive.bind(
+                                null,
+                                listing.id,
+                                true,
+                              )}
+                            >
+                              <button
+                                className="w-full rounded-lg px-3 py-2 text-left hover:bg-slate-50 disabled:text-slate-400"
+                                disabled={!completion.readyToPublish}
+                              >
+                                {completion.needsPrice
+                                  ? "Add price"
+                                  : completion.needsAvailability
+                                    ? "Add stock"
+                                    : "Publish"}
+                              </button>
+                            </form>
+                          ))}
+                      </div>
+                    </details>
                   </td>
                 </tr>
               );
             })}
             {!listings.length && (
               <tr>
-                <td colSpan={12} className="p-8 text-center text-slate-500">
+                <td colSpan={8} className="p-8 text-center text-slate-500">
                   No product listings yet.
                 </td>
               </tr>

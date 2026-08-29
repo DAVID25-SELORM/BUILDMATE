@@ -66,11 +66,20 @@ describe("simplified supplier selling workflow", () => {
     expect(inventory).toContain("setListingActive.bind(");
   });
   it("renders canonical variant identity in products and listing galleries", () => {
-    expect(productList).toContain("<th>Variant</th>");
-    expect(productList).toContain("<th>SKU</th>");
+    expect(productList).toContain(">Variant</th>");
+    expect(productList).toContain('listing.sku ?? "No SKU"');
     expect(productList).toContain('variant?.name ?? "Standard"');
     expect(mediaManager).toContain("listing.variantName");
     expect(mediaManager).toContain("listing.branchName");
+  });
+  it("keeps product scrolling local and responsive", () => {
+    expect(productList).toContain("max-h-[calc(100vh-12rem)]");
+    expect(productList).toContain("overflow-auto");
+    expect(productList).toContain("sticky left-0");
+    expect(productList).toContain("sticky right-0");
+    expect(productList).toContain("sticky top-0");
+    expect(productList).toContain("md:hidden");
+    expect(productList).toContain("Bulk actions");
   });
   it("keeps the Nana duplicate audit read-only and reference-safe", () => {
     expect(duplicateAudit).toContain("having count(*)>1");

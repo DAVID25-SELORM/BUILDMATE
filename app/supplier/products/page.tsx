@@ -182,7 +182,12 @@ export default async function SupplierProductsPage() {
         />
       </div>
       {!!clarifications?.length && (
-        <ClarificationQueue items={clarifications} products={catalogue} />
+        <details className="card mt-6 p-5">
+          <summary className="cursor-pointer font-bold text-amber-900">
+            Needs Attention / Clarifications ({clarifications.length})
+          </summary>
+          <ClarificationQueue items={clarifications} products={catalogue} />
+        </details>
       )}
       {canEdit === true && (
         <details className="card mt-6 p-5" id="advanced-listing-details">
@@ -195,31 +200,32 @@ export default async function SupplierProductsPage() {
           </p>
           <div className="mt-5 space-y-4">
             {inventoryListings.map((listing) => (
-              <ListingForm
-                key={listing.id}
-                products={catalogue}
-                branches={branches ?? []}
-                warehouses={warehouses ?? []}
-                initial={{
-                  id: listing.id,
-                  productId: listing.product_id,
-                  sku: listing.sku,
-                  price: listing.price,
-                  wholesalePrice: listing.wholesale_price,
-                  wholesaleMinimum: listing.wholesale_minimum,
-                  stockQuantity: listing.stock_quantity,
-                  stockStatus: listing.stock_status,
-                  inventoryMode: listing.inventory_mode,
-                  leadTimeDays: listing.lead_time_days,
-                  minimumOrderQuantity: listing.minimum_order_quantity,
-                  deliveryAvailable: listing.delivery_available,
-                  pickupAvailable: listing.pickup_available,
-                  supplierNotes: listing.supplier_notes,
-                  listingStatus: listing.listing_status,
-                  branchId: listing.branch_id,
-                  warehouseId: listing.warehouse_id,
-                }}
-              />
+              <div id={`advanced-listing-${listing.id}`} key={listing.id}>
+                <ListingForm
+                  products={catalogue}
+                  branches={branches ?? []}
+                  warehouses={warehouses ?? []}
+                  initial={{
+                    id: listing.id,
+                    productId: listing.product_id,
+                    sku: listing.sku,
+                    price: listing.price,
+                    wholesalePrice: listing.wholesale_price,
+                    wholesaleMinimum: listing.wholesale_minimum,
+                    stockQuantity: listing.stock_quantity,
+                    stockStatus: listing.stock_status,
+                    inventoryMode: listing.inventory_mode,
+                    leadTimeDays: listing.lead_time_days,
+                    minimumOrderQuantity: listing.minimum_order_quantity,
+                    deliveryAvailable: listing.delivery_available,
+                    pickupAvailable: listing.pickup_available,
+                    supplierNotes: listing.supplier_notes,
+                    listingStatus: listing.listing_status,
+                    branchId: listing.branch_id,
+                    warehouseId: listing.warehouse_id,
+                  }}
+                />
+              </div>
             ))}
           </div>
         </details>
@@ -239,7 +245,11 @@ export default async function SupplierProductsPage() {
           />
         </div>
       )}
-      {canEdit === true && <ProductMediaManager listings={mediaListings} />}
+      {canEdit === true && (
+        <div id="product-galleries">
+          <ProductMediaManager listings={mediaListings} />
+        </div>
+      )}
     </>
   );
 }
