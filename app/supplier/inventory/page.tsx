@@ -610,6 +610,22 @@ export default async function SupplierInventoryPage({
                   >
                     {row.on_hand == null ? "Set Up Stock" : "+ Add Stock"}
                   </OpenInventoryOperationButton>
+                  {listingLabels.get(row.listing_id)?.readyToPublish &&
+                    listingLabels.get(row.listing_id)?.listingStatus !==
+                      "published" && (
+                      <form
+                        action={setListingActive.bind(
+                          null,
+                          row.listing_id,
+                          true,
+                        )}
+                        className="mb-2"
+                      >
+                        <button className="inline-flex min-h-10 items-center rounded-xl border border-emerald-800 px-3 text-xs font-bold text-emerald-800 hover:bg-emerald-50">
+                          Publish
+                        </button>
+                      </form>
+                    )}
                   <details className="relative">
                     <summary className="cursor-pointer font-bold text-brand-700">
                       Actions
@@ -627,21 +643,6 @@ export default async function SupplierInventoryPage({
                       >
                         Edit price
                       </Link>
-                      {listingLabels.get(row.listing_id)?.readyToPublish &&
-                        listingLabels.get(row.listing_id)?.listingStatus !==
-                          "published" && (
-                          <form
-                            action={setListingActive.bind(
-                              null,
-                              row.listing_id,
-                              true,
-                            )}
-                          >
-                            <button className="block w-full rounded-lg px-3 py-2 text-left font-bold text-brand-700 hover:bg-slate-50">
-                              Publish to marketplace
-                            </button>
-                          </form>
-                        )}
                       <Link
                         className="block rounded-lg px-3 py-2 hover:bg-slate-50"
                         href={`/supplier/inventory/${row.listing_id}#movements`}

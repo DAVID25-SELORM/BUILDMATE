@@ -46,7 +46,7 @@ describe("simplified supplier selling workflow", () => {
   });
   it("lets a ready stocked draft publish from the inventory workflow", () => {
     expect(inventory).toContain("listingCompletion(");
-    expect(inventory).toContain("Publish to marketplace");
+    expect(inventory).toContain(">\n                          Publish\n");
     expect(inventory).toContain("setListingActive.bind(");
   });
 });
