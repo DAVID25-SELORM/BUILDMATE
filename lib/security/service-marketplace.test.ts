@@ -9,6 +9,10 @@ const hardening = readFileSync(
   "supabase/migrations/202608220068_service_marketplace_security_hardening.sql",
   "utf8",
 );
+const driverDiscovery = readFileSync(
+  "supabase/migrations/202608290077_verified_driver_service_discovery.sql",
+  "utf8",
+);
 const shell = readFileSync("components/dashboard/DashboardShell.tsx", "utf8");
 
 describe("service marketplace and safe previews", () => {
@@ -61,5 +65,19 @@ describe("service marketplace and safe previews", () => {
     expect(hardening).toContain('create policy "provider documents submit"');
     expect(hardening).toContain("status='pending'");
     expect(hardening).toContain("admin_review_service_provider_document");
+  });
+
+  it("publishes only verified active drivers as transport providers", () => {
+    expect(driverDiscovery).toContain("driver_record.role='driver'");
+    expect(driverDiscovery).toContain("driver_record.verification_status='verified'");
+    expect(driverDiscovery).toContain("driver_record.account_status='active'");
+    expect(driverDiscovery).toContain("'transport-delivery'");
+    expect(driverDiscovery).toContain("'VERIFIED_DRIVER_PUBLISHED'");
+    expect(driverDiscovery).toContain("verification_status='suspended'");
+  });
+
+  it("does not auto-approve a driver's self-registered professional profile", () => {
+    expect(driverDiscovery).toContain("provider_record.profile_source='operational_driver'");
+    expect(driverDiscovery).toContain("A self-registered professional keeps the independent admin-review");
   });
 });

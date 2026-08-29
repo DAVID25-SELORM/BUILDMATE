@@ -13,7 +13,7 @@ export default async function ServicesPage({
 }) {
   const q = await searchParams;
   const supabase = await createClient();
-  const [{ data: categories }, { data: providers }] = await Promise.all([
+  const [categoryResult, providerResult] = await Promise.all([
     supabase
       .from("service_categories")
       .select("id,name,slug,description")
@@ -28,6 +28,8 @@ export default async function ServicesPage({
       .eq("account_status", "active")
       .order("average_rating", { ascending: false }),
   ]);
+  const { data: categories, error: categoryError } = categoryResult;
+  const { data: providers, error: providerError } = providerResult;
   const keyword = q.q?.trim() ?? "";
   const location = (q.location ?? q.region)?.trim() ?? "";
   const filtered = (providers ?? []).filter(
@@ -97,6 +99,11 @@ export default async function ServicesPage({
         </div>
         {(keyword || location || q.category || q.availability) && <Link className="text-sm font-bold text-brand-700" href="/services">Clear filters</Link>}
       </div>
+      {(categoryError || providerError) && (
+        <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800" role="alert">
+          The professional directory could not be loaded. Please refresh the page or contact Support.
+        </div>
+      )}
       <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((provider) => {
           const services = provider.service_provider_categories as unknown as
@@ -149,7 +156,7 @@ export default async function ServicesPage({
             </article>
           );
         })}
-        {!filtered.length && (
+        {!filtered.length && !categoryError && !providerError && (
           <div className="card p-8 text-slate-600 md:col-span-2 xl:col-span-3">
             No verified professionals match these filters yet. Try a broader location or service, or request help through Support.
           </div>
