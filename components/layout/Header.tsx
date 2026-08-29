@@ -2,6 +2,9 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { CartLink } from "@/components/commerce/CartLink";
 import { MobileMenu } from "@/components/layout/MobileMenu";
+import { SignOutButton } from "@/components/auth/SignOutButton";
+import { getRedirectForRole } from "@/lib/auth/roles";
+import { createClient } from "@/lib/supabase/server";
 
 const links = [
   { label: "Shop", href: "/shop" },
@@ -12,7 +15,22 @@ const links = [
   { label: "Suppliers", href: "/suppliers/nana-attakorah", documentNavigation: true },
 ];
 
-export function Header() {
+function portalLabel(role: string | null | undefined) {
+  if (role === "supplier") return "Supplier Portal";
+  if (role === "driver") return "Driver Portal";
+  if (role === "admin" || role === "super_admin") return "Admin Portal";
+  return "Customer Portal";
+}
+
+export async function Header() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
+    : { data: null };
+  const accountHref = getRedirectForRole(profile?.role);
+  const accountLabel = portalLabel(profile?.role);
+
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="container-shell flex h-18 items-center justify-between py-4">
@@ -33,16 +51,20 @@ export function Header() {
           )}
         </nav>
         <div className="flex items-center gap-2">
-          <Link
-            href="/login"
-            className="hidden rounded-xl px-4 py-2 text-sm font-semibold sm:block"
-          >
-            Sign in
-          </Link>
-          <Link href="/register" className="btn-primary py-2.5 text-sm">
-            Get started
-          </Link>
-          <MobileMenu />
+          {user ? (
+            <>
+              <Link href={accountHref} className="btn-primary hidden py-2.5 text-sm sm:block">
+                {accountLabel}
+              </Link>
+              <SignOutButton className="hidden lg:block" />
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="hidden rounded-xl px-4 py-2 text-sm font-semibold sm:block">Sign in</Link>
+              <Link href="/register" className="btn-primary py-2.5 text-sm">Get started</Link>
+            </>
+          )}
+          <MobileMenu signedIn={Boolean(user)} accountHref={accountHref} accountLabel={accountLabel} />
           <CartLink />
         </div>
       </div>

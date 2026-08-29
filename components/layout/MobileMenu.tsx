@@ -2,18 +2,17 @@
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-const links = [
+import { SignOutButton } from "@/components/auth/SignOutButton";
+const publicLinks = [
   { label: "Shop", href: "/shop" },
   { label: "Services", href: "/services" },
   { label: "Categories", href: "/#categories" },
   { label: "Request Quote", href: "/request-quote", documentNavigation: true },
   { label: "Calculators", href: "/calculators" },
   { label: "Suppliers", href: "/suppliers/nana-attakorah", documentNavigation: true },
-  { label: "My Account", href: "/dashboard" },
   { label: "Get Support", href: "/contact" },
-  { label: "Sign in", href: "/login" },
 ];
-export function MobileMenu() {
+export function MobileMenu({ signedIn, accountHref, accountLabel }: { signedIn: boolean; accountHref: string; accountLabel: string }) {
   const [open, setOpen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -51,7 +50,7 @@ export function MobileMenu() {
             role="dialog"
             aria-label="Mobile navigation"
           >
-            {links.map(({ label, href, documentNavigation }) =>
+            {publicLinks.map(({ label, href, documentNavigation }) =>
               documentNavigation ? (
                 <a key={href} href={href} data-navigation="document" onClick={() => setOpen(false)} className="block rounded-xl px-4 py-3 font-semibold text-slate-800 hover:bg-brand-50 hover:text-brand-800">
                   {label}
@@ -61,6 +60,17 @@ export function MobileMenu() {
                   {label}
                 </Link>
               ),
+            )}
+            {signedIn ? (
+              <>
+                <Link href={accountHref} onClick={() => setOpen(false)} className="block rounded-xl bg-brand-50 px-4 py-3 font-semibold text-brand-800">{accountLabel}</Link>
+                <SignOutButton className="mt-2 w-full" />
+              </>
+            ) : (
+              <>
+                <Link href="/login" onClick={() => setOpen(false)} className="block rounded-xl px-4 py-3 font-semibold text-slate-800 hover:bg-brand-50 hover:text-brand-800">Sign in</Link>
+                <Link href="/register" onClick={() => setOpen(false)} className="mt-2 block rounded-xl bg-brand-700 px-4 py-3 text-center font-semibold text-white">Get started</Link>
+              </>
             )}
           </div>
         </div>

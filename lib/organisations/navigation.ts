@@ -12,35 +12,6 @@ export const customerCoreNavigation = [
   { label: "Support", href: "/support" },
 ] as const;
 
-export async function supplierNavigation(organisationId: string) {
-  const checks = await Promise.all(
-    [
-      "orders.view",
-      "quotations.view",
-      "products.view",
-      "inventory.view",
-      "reports.inventory",
-      "settlements.view",
-      "supplier.staff.view",
-      "supplier.profile.edit",
-    ].map((permission) => hasPermission({ permission, organisationId })),
-  );
-  return [
-    { label: "Overview", href: "/supplier" },
-    checks[0] && { label: "Orders", href: "/supplier/orders" },
-    checks[1] && { label: "Quotation requests", href: "/supplier/quotes" },
-    checks[2] && { label: "Products", href: "/supplier/products" },
-    checks[3] && { label: "Inventory", href: "/supplier/inventory" },
-    checks[4] && {
-      label: "Inventory reports",
-      href: "/supplier/inventory/reports",
-    },
-    checks[5] && { label: "Settlements", href: "/supplier/settlements" },
-    checks[6] && { label: "Staff", href: "/supplier/staff" },
-    checks[7] && { label: "Organisation settings", href: "/supplier/settings" },
-    { label: "Support", href: "/support" },
-  ].filter(Boolean) as { label: string; href: string }[];
-}
 export async function customerNavigation(organisationId?: string) {
   const [organisation, manage, requestCreate, requestApprove] = organisationId
     ? await Promise.all([
