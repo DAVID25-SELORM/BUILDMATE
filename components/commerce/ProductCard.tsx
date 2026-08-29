@@ -24,17 +24,6 @@ export type Product = {
   imageUrl?: string;
   imageAlt?: string;
 };
-function fallback(name: string) {
-  const value = name.toLowerCase();
-  if (value.includes("steel") || value.includes("rod"))
-    return "steel-reinforcement.webp";
-  if (value.includes("roof")) return "roofing-installation.webp";
-  if (value.includes("tile")) return "tiles-flooring.webp";
-  if (value.includes("paint")) return "paint-finishes.webp";
-  if (value.includes("block")) return "blocks-and-bricks.webp";
-  return "cement-and-concrete.webp";
-}
-
 export function ProductCard({ product }: { product: Product }) {
   const locations = product.locations?.length
     ? product.locations
@@ -45,15 +34,19 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <article className="card flex h-full flex-col overflow-hidden">
       <div className="relative h-44">
-        <Image
-          src={
-            product.imageUrl ?? `/images/categories/${fallback(product.name)}`
-          }
-          alt={product.imageAlt ?? `${product.name} building material`}
-          fill
-          sizes="(max-width:768px) 100vw,25vw"
-          className="object-cover"
-        />
+        {product.imageUrl ? (
+          <Image
+            src={product.imageUrl}
+            alt={product.imageAlt ?? `${product.name} building material`}
+            fill
+            sizes="(max-width:768px) 100vw,25vw"
+            className="object-cover"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center bg-slate-100 p-6 text-center text-sm font-semibold text-slate-500">
+            Product image coming soon
+          </div>
+        )}
       </div>
       <div className="flex flex-1 flex-col p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">

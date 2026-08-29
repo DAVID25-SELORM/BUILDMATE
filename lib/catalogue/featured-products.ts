@@ -6,6 +6,14 @@ type FeaturedListing = {
   product_id: string;
   supplier_id: string;
   price: number | string | null;
+  product_media:
+    | {
+        storage_path: string;
+        alt_text: string;
+        is_cover: boolean;
+        sort_order: number;
+      }[]
+    | null;
   products: {
     name: string;
     base_unit: string;
@@ -20,7 +28,7 @@ export async function getFeaturedProducts(limit = 4): Promise<Product[]> {
   const { data } = await supabase
     .from("supplier_listings")
     .select(
-      "product_id,supplier_id,price,products!inner(name,base_unit,images,is_active,categories(name)),organisations!supplier_listings_supplier_id_fkey!inner(name,verification_status,account_status)",
+      "product_id,supplier_id,price,product_media(storage_path,alt_text,is_cover,sort_order),products!inner(name,base_unit,images,is_active,categories(name)),organisations!supplier_listings_supplier_id_fkey!inner(name,verification_status,account_status)",
     )
     .eq("listing_status", "published")
     .eq("is_active", true)
@@ -28,7 +36,9 @@ export async function getFeaturedProducts(limit = 4): Promise<Product[]> {
     .eq("organisations.verification_status", "approved")
     .eq("organisations.account_status", "active")
     .not("branch_id", "is", null)
-    .or("and(inventory_mode.eq.exact_quantity,stock_quantity.gt.0),and(inventory_mode.eq.status_only,stock_status.eq.in_stock)")
+    .or(
+      "and(inventory_mode.eq.exact_quantity,stock_quantity.gt.0),and(inventory_mode.eq.status_only,stock_status.eq.in_stock)",
+    )
     .order("price")
     .limit(100);
   const grouped = new Map<
@@ -57,15 +67,27 @@ export async function getFeaturedProducts(limit = 4): Promise<Product[]> {
         Number(a.product.price) - Number(b.product.price),
     )
     .slice(0, limit)
-    .map(({ product, offerCount, supplierIds }) => ({
-      productId: product.product_id,
-      name: product.products.name,
-      category: product.products.categories?.name ?? "Materials",
-      price: Number(product.price),
-      unit: product.products.base_unit,
-      supplier: `${supplierIds.size} verified supplier${supplierIds.size === 1 ? "" : "s"}`,
-      supplierCount: supplierIds.size,
-      offerCount,
-      imageUrl: product.products.images?.[0],
-    }));
+    .map(({ product, offerCount, supplierIds }) => {
+      const media = [...(product.product_media ?? [])].sort(
+        (a, b) =>
+          Number(b.is_cover) - Number(a.is_cover) ||
+          a.sort_order - b.sort_order,
+      )[0];
+      return {
+        productId: product.product_id,
+        name: product.products.name,
+        category: product.products.categories?.name ?? "Materials",
+        price: Number(product.price),
+        unit: product.products.base_unit,
+        supplier: `${supplierIds.size} verified supplier${supplierIds.size === 1 ? "" : "s"}`,
+        supplierCount: supplierIds.size,
+        offerCount,
+        imageUrl: media
+          ? supabase.storage
+              .from("product-media")
+              .getPublicUrl(media.storage_path).data.publicUrl
+          : product.products.images?.[0],
+        imageAlt: media?.alt_text,
+      };
+    });
 }

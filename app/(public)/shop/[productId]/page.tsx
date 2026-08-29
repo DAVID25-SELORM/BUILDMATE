@@ -69,7 +69,9 @@ export default async function ProductOffersPage({
       .eq("organisations.verification_status", "approved")
       .eq("organisations.account_status", "active")
       .not("branch_id", "is", null)
-      .or("and(inventory_mode.eq.exact_quantity,stock_quantity.gt.0),and(inventory_mode.eq.status_only,stock_status.eq.in_stock)")
+      .or(
+        "and(inventory_mode.eq.exact_quantity,stock_quantity.gt.0),and(inventory_mode.eq.status_only,stock_status.eq.in_stock)",
+      )
       .order("price"),
   ]);
   if (!product) notFound();
@@ -80,17 +82,7 @@ export default async function ProductOffersPage({
       (!offer.price_valid_until || offer.price_valid_until >= today) &&
       (!offer.product_variant_id || offer.product_variants?.is_active === true),
   );
-  const firstMedia = offers
-    .flatMap((offer) => offer.product_media ?? [])
-    .sort(
-      (a, b) =>
-        Number(b.is_cover) - Number(a.is_cover) || a.sort_order - b.sort_order,
-    )[0];
-  const imageUrl = firstMedia
-    ? supabase.storage
-        .from("product-media")
-        .getPublicUrl(firstMedia.storage_path).data.publicUrl
-    : product.images?.[0];
+  const imageUrl = product.images?.[0];
   const category =
     (product.categories as unknown as { name: string } | null)?.name ??
     "Materials";
@@ -106,7 +98,7 @@ export default async function ProductOffersPage({
           {imageUrl ? (
             <Image
               src={imageUrl}
-              alt={firstMedia?.alt_text ?? product.name}
+              alt={product.name}
               fill
               sizes="(max-width:1024px) 100vw,380px"
               className="object-cover"
@@ -154,112 +146,148 @@ export default async function ProductOffersPage({
           </a>
         </div>
         <div className="mt-6 space-y-4">
-          {offers.map((offer) => (
-            <article
-              className="card grid gap-5 p-5 lg:grid-cols-[1fr_auto_auto] lg:items-center"
-              key={offer.id}
-            >
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-bold">
-                    {offer.organisations.name}
-                  </h3>
-                  <BadgeCheck
-                    className="h-5 w-5 text-brand-600"
-                    aria-label="Approved supplier"
-                  />
-                  {offer.product_variants && (
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
-                      {offer.product_variants.name}
-                    </span>
+          {offers.map((offer) => {
+            const offerMedia = [...(offer.product_media ?? [])].sort(
+              (a, b) =>
+                Number(b.is_cover) - Number(a.is_cover) ||
+                a.sort_order - b.sort_order,
+            )[0];
+            const offerImageUrl = offerMedia
+              ? supabase.storage
+                  .from("product-media")
+                  .getPublicUrl(offerMedia.storage_path).data.publicUrl
+              : imageUrl;
+            return (
+              <article
+                className="card grid gap-5 p-5 lg:grid-cols-[1fr_auto_auto] lg:items-center"
+                key={offer.id}
+              >
+                <div className="flex gap-4">
+                  {offerImageUrl && (
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+                      <Image
+                        src={offerImageUrl}
+                        alt={offerMedia?.alt_text ?? product.name}
+                        fill
+                        sizes="80px"
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg font-bold">
+                        {offer.organisations.name}
+                      </h3>
+                      <BadgeCheck
+                        className="h-5 w-5 text-brand-600"
+                        aria-label="Approved supplier"
+                      />
+                      {offer.product_variants && (
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
+                          {offer.product_variants.name}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
+                      <span className="flex items-center gap-1">
+                        <PackageCheck className="h-4 w-4" />
+                        {offer.inventory_mode === "exact_quantity" &&
+                        offer.show_exact_stock_to_customers &&
+                        offer.stock_quantity != null
+                          ? `${offer.stock_quantity} available`
+                          : offer.stock_status === "confirmation_required"
+                            ? "Confirm availability with supplier"
+                            : offer.stock_status.replaceAll("_", " ")}
+                      </span>
+                      {offer.supplier_branches && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-4 w-4" />
+                          {offer.supplier_branches.name},{" "}
+                          {offer.supplier_branches.city}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Clock3 className="h-4 w-4" />
+                        {offer.lead_time_days === 0
+                          ? "Same day"
+                          : `${offer.lead_time_days} day lead time`}
+                      </span>
+                      {offer.delivery_available && (
+                        <span className="flex items-center gap-1">
+                          <Truck className="h-4 w-4" />
+                          Delivery
+                        </span>
+                      )}
+                      {offer.pickup_available && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-4 w-4" />
+                          Pickup
+                        </span>
+                      )}
+                    </div>
+                    {offer.supplier_notes && (
+                      <p className="mt-3 text-sm text-slate-600">
+                        {offer.supplier_notes}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="lg:text-right">
+                  <p className="text-2xl font-black">
+                    GHS {Number(offer.price).toFixed(2)}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    per {product.base_unit}
+                    {offer.minimum_order_quantity
+                      ? ` · min. ${offer.minimum_order_quantity}`
+                      : ""}
+                  </p>
+                  {offer.wholesale_price && (
+                    <p className="mt-1 text-sm font-semibold text-brand-700">
+                      GHS {Number(offer.wholesale_price).toFixed(2)} wholesale
+                    </p>
                   )}
                 </div>
-                <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
-                  <span className="flex items-center gap-1">
-                    <PackageCheck className="h-4 w-4" />
-                    {offer.inventory_mode === "exact_quantity" &&
-                    offer.show_exact_stock_to_customers &&
-                    offer.stock_quantity != null
-                      ? `${offer.stock_quantity} available`
-                      : offer.stock_status === "confirmation_required"
-                        ? "Confirm availability with supplier"
-                        : offer.stock_status.replaceAll("_", " ")}
-                  </span>
-                  {offer.supplier_branches && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      {offer.supplier_branches.name},{" "}
-                      {offer.supplier_branches.city}
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1">
-                    <Clock3 className="h-4 w-4" />
-                    {offer.lead_time_days === 0
-                      ? "Same day"
-                      : `${offer.lead_time_days} day lead time`}
-                  </span>
-                  {offer.delivery_available && (
-                    <span className="flex items-center gap-1">
-                      <Truck className="h-4 w-4" />
-                      Delivery
-                    </span>
-                  )}
-                  {offer.pickup_available && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      Pickup
-                    </span>
-                  )}
-                </div>
-                {offer.supplier_notes && (
-                  <p className="mt-3 text-sm text-slate-600">
-                    {offer.supplier_notes}
-                  </p>
-                )}
-              </div>
-              <div className="lg:text-right">
-                <p className="text-2xl font-black">
-                  GHS {Number(offer.price).toFixed(2)}
-                </p>
-                <p className="text-xs text-slate-500">
-                  per {product.base_unit}
-                  {offer.minimum_order_quantity
-                    ? ` · min. ${offer.minimum_order_quantity}`
-                    : ""}
-                </p>
-                {offer.wholesale_price && (
-                  <p className="mt-1 text-sm font-semibold text-brand-700">
-                    GHS {Number(offer.wholesale_price).toFixed(2)} wholesale
-                  </p>
-                )}
-              </div>
-              <div className="w-full lg:w-44">
-                <AddToCartButton
-                  item={{
-                    listingId: offer.id,
-                    productId,
-                    variant: offer.product_variants?.name ?? null,
-                    supplierId: offer.supplier_id,
-                    branchId: offer.branch_id,
-                    name: product.name,
-                    supplier: offer.organisations.name,
-                    unit: product.base_unit,
-                    price: Number(offer.price),
-                    inventoryMode: offer.inventory_mode,
-                    maxQuantity:
-                      offer.inventory_mode === "exact_quantity"
-                        ? Number(offer.stock_quantity)
+                <div className="w-full lg:w-44">
+                  <AddToCartButton
+                    item={{
+                      listingId: offer.id,
+                      productId,
+                      variant: offer.product_variants?.name ?? null,
+                      supplierId: offer.supplier_id,
+                      branchId: offer.branch_id,
+                      name: product.name,
+                      supplier: offer.organisations.name,
+                      unit: product.base_unit,
+                      price: Number(offer.price),
+                      inventoryMode: offer.inventory_mode,
+                      maxQuantity:
+                        offer.inventory_mode === "exact_quantity"
+                          ? Number(offer.stock_quantity)
+                          : undefined,
+                      availabilityLabel:
+                        offer.inventory_mode === "confirmation_required" ||
+                        offer.stock_status === "confirmation_required"
+                          ? "Supplier confirmation required"
+                          : undefined,
+                      deliveryAvailable: offer.delivery_available,
+                      pickupAvailable: offer.pickup_available,
+                      location: offer.supplier_branches
+                        ? [
+                            offer.supplier_branches.name,
+                            offer.supplier_branches.city,
+                          ]
+                            .filter(Boolean)
+                            .join(", ")
                         : undefined,
-                    availabilityLabel: offer.inventory_mode === "confirmation_required" || offer.stock_status === "confirmation_required" ? "Supplier confirmation required" : undefined,
-                    deliveryAvailable: offer.delivery_available,
-                    pickupAvailable: offer.pickup_available,
-                    location: offer.supplier_branches ? [offer.supplier_branches.name, offer.supplier_branches.city].filter(Boolean).join(", ") : undefined,
-                    imageUrl,
-                  }}
-                />
-              </div>
-            </article>
-          ))}
+                      imageUrl: offerImageUrl,
+                    }}
+                  />
+                </div>
+              </article>
+            );
+          })}
           {!offers.length && (
             <div className="card p-10 text-center text-slate-500">
               No supplier has a published offer for this product right now.
